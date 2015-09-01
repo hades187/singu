@@ -232,22 +232,22 @@ LLViewerParcelMgr::~LLViewerParcelMgr()
 
 void LLViewerParcelMgr::dump()
 {
-	llinfos << "Parcel Manager Dump" << llendl;
-	llinfos << "mSelected " << S32(mSelected) << llendl;
-	llinfos << "Selected parcel: " << llendl;
-	llinfos << mWestSouth << " to " << mEastNorth << llendl;
+	LL_INFOS() << "Parcel Manager Dump" << LL_ENDL;
+	LL_INFOS() << "mSelected " << S32(mSelected) << LL_ENDL;
+	LL_INFOS() << "Selected parcel: " << LL_ENDL;
+	LL_INFOS() << mWestSouth << " to " << mEastNorth << LL_ENDL;
 	mCurrentParcel->dump();
-	llinfos << "banning " << mCurrentParcel->mBanList.size() << llendl;
+	LL_INFOS() << "banning " << mCurrentParcel->mBanList.size() << LL_ENDL;
 	
 	access_map_const_iterator cit = mCurrentParcel->mBanList.begin();
 	access_map_const_iterator end = mCurrentParcel->mBanList.end();
 	for ( ; cit != end; ++cit)
 	{
-		llinfos << "ban id " << (*cit).first << llendl;
+		LL_INFOS() << "ban id " << (*cit).first << LL_ENDL;
 	}
-	llinfos << "Hover parcel:" << llendl;
+	LL_INFOS() << "Hover parcel:" << LL_ENDL;
 	mHoverParcel->dump();
-	llinfos << "Agent parcel:" << llendl;
+	LL_INFOS() << "Agent parcel:" << LL_ENDL;
 	mAgentParcel->dump();
 }
 
@@ -315,7 +315,7 @@ S32 LLViewerParcelMgr::getSelectedArea() const
 		F64 width = mEastNorth.mdV[VX] - mWestSouth.mdV[VX];
 		F64 height = mEastNorth.mdV[VY] - mWestSouth.mdV[VY];
 		F32 area = (F32)(width * height);
-		rv = llmath::llround(area);
+		rv = ll_round(area);
 	}
 	return rv;
 }
@@ -335,10 +335,10 @@ void LLViewerParcelMgr::writeHighlightSegments(F32 west, F32 south, F32 east,
 											   F32 north)
 {
 	S32 x, y;
-	S32 min_x = llmath::llround( west / PARCEL_GRID_STEP_METERS );
-	S32 max_x = llmath::llround( east / PARCEL_GRID_STEP_METERS );
-	S32 min_y = llmath::llround( south / PARCEL_GRID_STEP_METERS );
-	S32 max_y = llmath::llround( north / PARCEL_GRID_STEP_METERS );
+	S32 min_x = ll_round( west / PARCEL_GRID_STEP_METERS );
+	S32 max_x = ll_round( east / PARCEL_GRID_STEP_METERS );
+	S32 min_y = ll_round( south / PARCEL_GRID_STEP_METERS );
+	S32 max_y = ll_round( north / PARCEL_GRID_STEP_METERS );
 
 	const S32 STRIDE = mParcelsPerEdge+1;
 
@@ -450,12 +450,12 @@ LLParcelSelectionHandle LLViewerParcelMgr::selectParcelAt(const LLVector3d& pos_
 	LLVector3d northeast = pos_global;
 
 	southwest -= LLVector3d( PARCEL_GRID_STEP_METERS/2, PARCEL_GRID_STEP_METERS/2, 0 );
-	southwest.mdV[VX] = llmath::llround( southwest.mdV[VX], (F64)PARCEL_GRID_STEP_METERS );
-	southwest.mdV[VY] = llmath::llround( southwest.mdV[VY], (F64)PARCEL_GRID_STEP_METERS );
+	southwest.mdV[VX] = ll_round( southwest.mdV[VX], (F64)PARCEL_GRID_STEP_METERS );
+	southwest.mdV[VY] = ll_round( southwest.mdV[VY], (F64)PARCEL_GRID_STEP_METERS );
 
 	northeast += LLVector3d( PARCEL_GRID_STEP_METERS/2, PARCEL_GRID_STEP_METERS/2, 0 );
-	northeast.mdV[VX] = llmath::llround( northeast.mdV[VX], (F64)PARCEL_GRID_STEP_METERS );
-	northeast.mdV[VY] = llmath::llround( northeast.mdV[VY], (F64)PARCEL_GRID_STEP_METERS );
+	northeast.mdV[VX] = ll_round( northeast.mdV[VX], (F64)PARCEL_GRID_STEP_METERS );
+	northeast.mdV[VY] = ll_round( northeast.mdV[VY], (F64)PARCEL_GRID_STEP_METERS );
 
 	// Snap to parcel
 	return selectLand( southwest, northeast, TRUE );
@@ -633,13 +633,13 @@ void LLViewerParcelMgr::deselectLand()
 
 void LLViewerParcelMgr::addObserver(LLParcelObserver* observer)
 {
-	mObservers.put(observer);
+	mObservers.push_back(observer);
 }
 
 
 void LLViewerParcelMgr::removeObserver(LLParcelObserver* observer)
 {
-	mObservers.removeObj(observer);
+	vector_replace_with_last(mObservers, observer);
 }
 
 
@@ -648,16 +648,16 @@ void LLViewerParcelMgr::removeObserver(LLParcelObserver* observer)
 // from the list.
 void LLViewerParcelMgr::notifyObservers()
 {
-	LLDynamicArray<LLParcelObserver*> observers;
-	S32 count = mObservers.count();
+	std::vector<LLParcelObserver*> observers;
+	S32 count = mObservers.size();
 	S32 i;
 	for(i = 0; i < count; ++i)
 	{
-		observers.put(mObservers.get(i));
+		observers.push_back(mObservers.at(i));
 	}
 	for(i = 0; i < count; ++i)
 	{
-		observers.get(i)->changed();
+		observers.at(i)->changed();
 	}
 }
 
@@ -992,7 +992,7 @@ void LLViewerParcelMgr::sendParcelGodForceOwner(const LLUUID& owner_id)
 		return;
 	}
 
-	llinfos << "Claiming " << mWestSouth << " to " << mEastNorth << llendl;
+	LL_INFOS() << "Claiming " << mWestSouth << " to " << mEastNorth << LL_ENDL;
 
 	// BUG: Only works for the region containing mWestSouthBottom
 	LLVector3d east_north_region_check( mEastNorth );
@@ -1015,7 +1015,7 @@ void LLViewerParcelMgr::sendParcelGodForceOwner(const LLUUID& owner_id)
 		return;
 	}
 
-	llinfos << "Region " << region->getOriginGlobal() << llendl;
+	LL_INFOS() << "Region " << region->getOriginGlobal() << LL_ENDL;
 
 	LLSD payload;
 	payload["owner_id"] = owner_id;
@@ -1155,8 +1155,8 @@ LLViewerParcelMgr::ParcelBuyInfo* LLViewerParcelMgr::setupParcelBuy(
 	
 	if (is_claim)
 	{
-		llinfos << "Claiming " << mWestSouth << " to " << mEastNorth << llendl;
-		llinfos << "Region " << region->getOriginGlobal() << llendl;
+		LL_INFOS() << "Claiming " << mWestSouth << " to " << mEastNorth << LL_ENDL;
+		LL_INFOS() << "Region " << region->getOriginGlobal() << LL_ENDL;
 
 		// BUG: Only works for the region containing mWestSouthBottom
 		LLVector3d east_north_region_check( mEastNorth );
@@ -1326,7 +1326,7 @@ void LLViewerParcelMgr::sendParcelPropertiesUpdate(LLParcel* parcel, bool use_ag
 
 	LLViewerRegion *region = use_agent_region ? gAgent.getRegion() : LLWorld::getInstance()->getRegionFromPosGlobal( mWestSouth );
 	if (!region) return;
-	//llinfos << "found region: " << region->getName() << llendl;
+	//LL_INFOS() << "found region: " << region->getName() << LL_ENDL;
 
 	LLSD body;
 	std::string url = region->getCapability("ParcelPropertiesUpdate");
@@ -1336,8 +1336,8 @@ void LLViewerParcelMgr::sendParcelPropertiesUpdate(LLParcel* parcel, bool use_ag
 		U32 message_flags = 0x01;
 		body["flags"] = ll_sd_from_U32(message_flags);
 		parcel->packMessage(body);
-		llinfos << "Sending parcel properties update via capability to: "
-			<< url << llendl;
+		LL_INFOS() << "Sending parcel properties update via capability to: "
+			<< url << LL_ENDL;
 		LLHTTPClient::post(url, body, new LLHTTPClient::ResponderIgnore);
 	}
 	else
@@ -1433,7 +1433,7 @@ void LLViewerParcelMgr::processParcelOverlay(LLMessageSystem *msg, void **user)
 
 	if (packed_overlay_size <= 0)
 	{
-		llwarns << "Overlay size " << packed_overlay_size << llendl;
+		LL_WARNS() << "Overlay size " << packed_overlay_size << LL_ENDL;
 		return;
 	}
 
@@ -1444,8 +1444,8 @@ void LLViewerParcelMgr::processParcelOverlay(LLMessageSystem *msg, void **user)
 // </FS:CR> Aurora Sim
 	if (packed_overlay_size != expected_size)
 	{
-		llwarns << "Got parcel overlay size " << packed_overlay_size
-			<< " expecting " << expected_size << llendl;
+		LL_WARNS() << "Got parcel overlay size " << packed_overlay_size
+			<< " expecting " << expected_size << LL_ENDL;
 		return;
 	}
 
@@ -1518,7 +1518,7 @@ void LLViewerParcelMgr::processParcelProperties(LLMessageSystem *msg, void **use
 	if (request_result == PARCEL_RESULT_NO_DATA)
 	{
 		// no valid parcel data
-		llinfos << "no valid parcel data" << llendl;
+		LL_INFOS() << "no valid parcel data" << LL_ENDL;
 		return;
 	}
 
@@ -1550,9 +1550,9 @@ void LLViewerParcelMgr::processParcelProperties(LLMessageSystem *msg, void **use
 	}
 	else
 	{
-		llinfos << "out of order agent parcel sequence id " << sequence_id
+		LL_INFOS() << "out of order agent parcel sequence id " << sequence_id
 			<< " last good " << parcel_mgr.mAgentParcelSequenceID
-			<< llendl;
+			<< LL_ENDL;
 		return;
 	}
 
@@ -1825,14 +1825,14 @@ void LLViewerParcelMgr::processParcelProperties(LLMessageSystem *msg, void **use
 						}
 						else
 						{
-							llinfos << "Stopping parcel music (invalid audio stream URL)" << llendl;
+							LL_INFOS() << "Stopping parcel music (invalid audio stream URL)" << LL_ENDL;
 							// clears the URL 
 							gAudiop->startInternetStream(LLStringUtil::null); 
 						}
 					}
 					else if (!gAudiop->getInternetStreamURL().empty())
 					{
-						llinfos << "Stopping parcel music (parcel stream URL is empty)" << llendl;
+						LL_INFOS() << "Stopping parcel music (parcel stream URL is empty)" << LL_ENDL;
 						gAudiop->startInternetStream(LLStringUtil::null);
 					}
 				}
@@ -1851,7 +1851,7 @@ void optionally_start_music(LLParcel* parcel)
 	if (gSavedSettings.getBOOL("AudioStreamingMusic"))
 	{
 		// Make the user click the start button on the overlay bar. JC
-		//		llinfos << "Starting parcel music " << parcel->getMusicURL() << llendl;
+		//		LL_INFOS() << "Starting parcel music " << parcel->getMusicURL() << LL_ENDL;
 
 		// now only play music when you enter a new parcel if the control is in PLAY state
 		// changed as part of SL-4878
@@ -1891,8 +1891,8 @@ void LLViewerParcelMgr::processParcelAccessListReply(LLMessageSystem *msg, void 
 
 	if (parcel_id != parcel->getLocalID())
 	{
-		llwarns << "processParcelAccessListReply for parcel " << parcel_id
-			<< " which isn't the selected parcel " << parcel->getLocalID()<< llendl;
+		LL_WARNS() << "processParcelAccessListReply for parcel " << parcel_id
+			<< " which isn't the selected parcel " << parcel->getLocalID()<< LL_ENDL;
 		return;
 	}
 

@@ -82,6 +82,7 @@ set(viewer_SOURCE_FILES
     NACLantispam.cpp
     aihttpview.cpp
     aixmllindengenepool.cpp
+    alfloaterregiontracker.cpp
     aoremotectrl.cpp
     ascentfloatercontactgroups.cpp
     ascentkeyword.cpp
@@ -94,9 +95,9 @@ set(viewer_SOURCE_FILES
     floaterao.cpp
     floaterlocalassetbrowse.cpp
     floatervoicelicense.cpp
-	generichandlers.cpp
-    hbfloatergrouptitles.cpp
+    generichandlers.cpp
     groupchatlistener.cpp
+    hbfloatergrouptitles.cpp
     hippofloaterxml.cpp
     hippogridmanager.cpp
     hippolimits.cpp
@@ -108,6 +109,7 @@ set(viewer_SOURCE_FILES
     lggdicdownload.cpp
     lgghunspell_wrapper.cpp
     llaccountingcostmanager.cpp
+    llaisapi.cpp
     llagent.cpp
     llagentaccess.cpp
     llagentcamera.cpp
@@ -295,6 +297,7 @@ set(viewer_SOURCE_FILES
     llgroupnotify.cpp
     llhomelocationresponder.cpp
     llhoverview.cpp
+    llhttpretrypolicy.cpp
     llhudeffect.cpp
     llhudeffectbeam.cpp
     llhudeffectlookat.cpp
@@ -520,6 +523,7 @@ set(viewer_SOURCE_FILES
     llviewerobject.cpp
     llviewerobjectbackup.cpp
     llviewerobjectlist.cpp
+    llvieweroctree.cpp
     llviewerparcelmedia.cpp
     llviewerparcelmediaautoplay.cpp
     llviewerparcelmgr.cpp
@@ -580,7 +584,6 @@ set(viewer_SOURCE_FILES
     llworldmipmap.cpp
     llxmlrpcresponder.cpp
     m7wlinterface.cpp
-    noise.cpp
     pipeline.cpp
     qtoolalign.cpp
     rlvactions.cpp
@@ -611,6 +614,7 @@ set(viewer_HEADER_FILES
     NACLantispam.h
     aihttpview.h
     aixmllindengenepool.h
+    alfloaterregiontracker.h
     aoremotectrl.h
     ascentfloatercontactgroups.h
     ascentkeyword.h
@@ -623,7 +627,7 @@ set(viewer_HEADER_FILES
     floaterao.h
     floaterlocalassetbrowse.h
     floatervoicelicense.h
-	generichandlers.h
+    generichandlers.h
     groupchatlistener.h
     hbfloatergrouptitles.h
     hippofloaterxml.h
@@ -637,6 +641,7 @@ set(viewer_HEADER_FILES
     lggdicdownload.h
     lgghunspell_wrapper.h
     llaccountingcostmanager.h
+    llaisapi.h
     llagent.h
     llagentaccess.h
     llagentcamera.h
@@ -823,6 +828,7 @@ set(viewer_HEADER_FILES
     llgroupactions.h
     llgroupmgr.h
     llgroupnotify.h
+    llhttpretrypolicy.h
     llhomelocationresponder.h
     llhoverview.h
     llhudeffect.h
@@ -1054,6 +1060,7 @@ set(viewer_HEADER_FILES
     llviewerobject.h
     llviewerobjectbackup.h
     llviewerobjectlist.h
+    llvieweroctree.h
     llviewerparcelmedia.h
     llviewerparcelmediaautoplay.h
     llviewerparcelmgr.h
@@ -1117,7 +1124,6 @@ set(viewer_HEADER_FILES
     llxmlrpcresponder.h
     m7wlinterface.h
     macmain.h
-    noise.h
     pipeline.h
     qtoolalign.h
     rlvactions.h
@@ -1137,8 +1143,6 @@ set(viewer_HEADER_FILES
     shcommandhandler.h
     shfloatermediaticker.h
     wlfPanel_AdvSettings.h
-    VertexCache.h
-    VorbisFramework.h
     )
 
 source_group("CMake Rules" FILES ViewerInstall.cmake)
@@ -1348,7 +1352,8 @@ set(viewer_APPSETTINGS_FILES
     app_settings/cmd_line.xml
     app_settings/grass.xml
     app_settings/high_graphics.xml
-    app_settings/keys.ini
+    app_settings/keys.xml
+    app_settings/keysZQSD.xml
     app_settings/keywords.ini
     app_settings/logcontrol.xml
     app_settings/low_graphics.xml

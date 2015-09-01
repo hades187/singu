@@ -52,6 +52,9 @@
 		<layout_panel name="panel6">
 			<button label="Radar" name="radar_list_btn" tool_tip="Ver lista de avatares cercanos.(Ctrl-Shift-A)"/>
 		</layout_panel>
+		<layout_panel name="panelregiontracker">
+			<button label="Monitor Región" name="region_tracker_btn" tool_tip="Monitorear el estado de varias regiones"/>
+    </layout_panel>
 		<layout_panel name="panelcameracontrols">
 			<button label="Controles Cámara" name="camera_controls_btn"/>
 		</layout_panel>
@@ -231,6 +234,9 @@
 		<layout_panel name="panel13">
 			<button label="Inventario" name="inventory_btn" tool_tip="Tus items. (Ctrl-I)"/>
 		</layout_panel>
+		<layout_panel name="panelavatar" >
+			<button label="Avatares Predeterminados" iname="avatar_btn"/>
+		</layout_panel>
 		<layout_panel name="paneloutfit">
 			<button label="Hacer Vestuario" name="make_outfit_btn"/>
 		</layout_panel>
@@ -246,8 +252,13 @@
 		<layout_panel name="panelpreferences">
 			<button label="Preferencias" name="preferences_btn" tool_tip="Ctrl-P"/>
 		</layout_panel>
+		<layout_panel name="paneljoystick">
+			<button label="Joystick" name="joystick_btn"/>
+			<button label="" name="enable_joystick" tool_tip="Activar/Desactivar controles de Joystick"/>
+		</layout_panel>
 		<layout_panel name="panelautoreplace">
-			<button label="Reemplazo Automático" name="auto_replace_btn"/>
+			<button label="Reemp. Automático" name="auto_replace_btn"/>
+			<button label="" name="enable_autoreplace" tool_tip="Activa/Desactiva el Reemplazo Automático"/>
 		</layout_panel>
 		<layout_panel name="paneldisplayname">
 			<button label="Nombre a Mostrar" name="display_name_btn"/>

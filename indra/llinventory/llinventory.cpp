@@ -34,7 +34,6 @@
 #include "llsd.h"
 #include "message.h"
 #include <boost/tokenizer.hpp>
-#include "../newview/hippogridmanager.h"
 
 #include "llsdutil.h"
 
@@ -52,6 +51,7 @@ static const std::string INV_DESC_LABEL("desc");
 static const std::string INV_PERMISSIONS_LABEL("permissions");
 static const std::string INV_SHADOW_ID_LABEL("shadow_id");
 static const std::string INV_ASSET_ID_LABEL("asset_id");
+static const std::string INV_LINKED_ID_LABEL("linked_id");
 static const std::string INV_SALE_INFO_LABEL("sale_info");
 static const std::string INV_FLAGS_LABEL("flags");
 static const std::string INV_CREATION_DATE_LABEL("created_at");
@@ -77,13 +77,15 @@ LLInventoryObject::LLInventoryObject(const LLUUID& uuid,
 	mUUID(uuid),
 	mParentUUID(parent_uuid),
 	mType(type),
-	mName(name)
+	mName(name),
+	mCreationDate(0)
 {
 	correctInventoryName(mName);
 }
 
 LLInventoryObject::LLInventoryObject() :
-	mType(LLAssetType::AT_NONE)
+	mType(LLAssetType::AT_NONE),
+	mCreationDate(0)
 {
 }
 
@@ -212,8 +214,8 @@ BOOL LLInventoryObject::importLegacyStream(std::istream& input_stream)
 		}
 		else
 		{
-			llwarns << "unknown keyword '" << keyword
-					<< "' in LLInventoryObject::importLegacyStream() for object " << mUUID << llendl;
+			LL_WARNS() << "unknown keyword '" << keyword
+					<< "' in LLInventoryObject::importLegacyStream() for object " << mUUID << LL_ENDL;
 		}
 	}
 	return TRUE;
@@ -249,23 +251,16 @@ BOOL LLInventoryObject::exportLegacyStream(std::ostream& output_stream, BOOL) co
 	return TRUE;
 }
 
-
-void LLInventoryObject::removeFromServer()
-{
-	// don't do nothin'
-	llwarns << "LLInventoryObject::removeFromServer() called.  Doesn't do anything." << llendl;
-}
-
 void LLInventoryObject::updateParentOnServer(BOOL) const
 {
 	// don't do nothin'
-	llwarns << "LLInventoryObject::updateParentOnServer() called.  Doesn't do anything." << llendl;
+	LL_WARNS() << "LLInventoryObject::updateParentOnServer() called.  Doesn't do anything." << LL_ENDL;
 }
 
 void LLInventoryObject::updateServer(BOOL) const
 {
 	// don't do nothin'
-	llwarns << "LLInventoryObject::updateServer() called.  Doesn't do anything." << llendl;
+	LL_WARNS() << "LLInventoryObject::updateServer() called.  Doesn't do anything." << LL_ENDL;
 }
 
 // inline
@@ -277,6 +272,25 @@ void LLInventoryObject::correctInventoryName(std::string& name)
 	LLStringUtil::truncate(name, DB_INV_ITEM_NAME_STR_LEN);
 }
 
+time_t LLInventoryObject::getCreationDate() const
+{
+	return mCreationDate;
+}
+
+void LLInventoryObject::setCreationDate(time_t creation_date_utc)
+{
+	mCreationDate = creation_date_utc;
+}
+
+const std::string& LLInventoryItem::getDescription() const
+{
+	return mDescription;
+}
+
+const std::string& LLInventoryItem::getActualDescription() const
+{
+	return mDescription;
+}
 
 ///----------------------------------------------------------------------------
 /// Class LLInventoryItem
@@ -299,9 +313,9 @@ LLInventoryItem::LLInventoryItem(const LLUUID& uuid,
 	mDescription(desc),
 	mSaleInfo(sale_info),
 	mInventoryType(inv_type),
-	mFlags(flags),
-	mCreationDate(creation_date_utc)
+	mFlags(flags)
 {
+	mCreationDate = creation_date_utc;
 	LLStringUtil::replaceNonstandardASCII(mDescription, ' ');
 	LLStringUtil::replaceChar(mDescription, '|', ' ');
 	mPermissions.initMasks(inv_type);
@@ -314,9 +328,9 @@ LLInventoryItem::LLInventoryItem() :
 	mDescription(),
 	mSaleInfo(),
 	mInventoryType(LLInventoryType::IT_NONE),
-	mFlags(0),
-	mCreationDate(0)
+	mFlags(0)
 {
+	mCreationDate = (time_t)0;
 }
 
 LLInventoryItem::LLInventoryItem(const LLInventoryItem* other) :
@@ -376,44 +390,29 @@ void LLInventoryItem::setAssetUUID(const LLUUID& asset_id)
 }
 
 
-const std::string& LLInventoryItem::getDescription() const
-{
-	return mDescription;
-}
-
-const std::string& LLInventoryItem::getActualDescription() const
-{
-	return mDescription;
-}
-
-time_t LLInventoryItem::getCreationDate() const
-{
-	return mCreationDate;
-}
-
 U32 LLInventoryItem::getCRC32() const
 {
 	// *FIX: Not a real crc - more of a checksum.
 	// *NOTE: We currently do not validate the name or description,
 	// but if they change in transit, it's no big deal.
 	U32 crc = mUUID.getCRC32();
-	//lldebugs << "1 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "1 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mParentUUID.getCRC32();
-	//lldebugs << "2 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "2 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mPermissions.getCRC32();
-	//lldebugs << "3 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "3 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mAssetUUID.getCRC32();
-	//lldebugs << "4 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "4 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mType;
-	//lldebugs << "5 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "5 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mInventoryType;
-	//lldebugs << "6 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "6 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mFlags;
-	//lldebugs << "7 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "7 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += mSaleInfo.getCRC32();
-	//lldebugs << "8 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "8 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	crc += (U32)mCreationDate;
-	//lldebugs << "9 crc: " << std::hex << crc << std::dec << llendl;
+	//LL_DEBUGS() << "9 crc: " << std::hex << crc << std::dec << LL_ENDL;
 	return crc;
 }
 
@@ -445,11 +444,6 @@ void LLInventoryItem::setInventoryType(LLInventoryType::EType inv_type)
 void LLInventoryItem::setFlags(U32 flags)
 {
 	mFlags = flags;
-}
-
-void LLInventoryItem::setCreationDate(time_t creation_date_utc)
-{
-	mCreationDate = creation_date_utc;
 }
 
 // Currently only used in the Viewer to handle calling cards
@@ -513,6 +507,12 @@ U32 LLInventoryItem::getFlags() const
 	return mFlags;
 }
 
+time_t LLInventoryItem::getCreationDate() const
+{
+	return mCreationDate;
+}
+
+
 // virtual
 void LLInventoryItem::packMessage(LLMessageSystem* msg) const
 {
@@ -544,10 +544,6 @@ BOOL LLInventoryItem::unpackMessage(LLMessageSystem* msg, const char* block, S32
 	S8 type;
 	msg->getS8Fast(block, _PREHASH_Type, type, block_num);
 	mType = static_cast<LLAssetType::EType>(type);
-	if (mType == LLAssetType::AT_LINK || mType == LLAssetType::AT_LINK_FOLDER)
-	{
-		gHippoGridManager->getConnectedGrid()->setSupportsInvLinks(true);
-	}
 	msg->getS8(block, "InvType", type, block_num);
 	mInventoryType = static_cast<LLInventoryType::EType>(type);
 	mPermissions.initMasks(mInventoryType);
@@ -573,13 +569,13 @@ BOOL LLInventoryItem::unpackMessage(LLMessageSystem* msg, const char* block, S32
 #ifdef CRC_CHECK
 	if(local_crc == remote_crc)
 	{
-		lldebugs << "crc matches" << llendl;
+		LL_DEBUGS() << "crc matches" << LL_ENDL;
 		return TRUE;
 	}
 	else
 	{
-		llwarns << "inventory crc mismatch: local=" << std::hex << local_crc
-				<< " remote=" << remote_crc << std::dec << llendl;
+		LL_WARNS() << "inventory crc mismatch: local=" << std::hex << local_crc
+				<< " remote=" << remote_crc << std::dec << LL_ENDL;
 		return FALSE;
 	}
 #else
@@ -715,7 +711,7 @@ BOOL LLInventoryItem::importFile(LLFILE* fp)
 			const char *donkey = mDescription.c_str();
 			if (donkey[0] == '|')
 			{
-				llerrs << "Donkey" << llendl;
+				LL_ERRS() << "Donkey" << LL_ENDL;
 			}
 			*/
 		}
@@ -727,8 +723,8 @@ BOOL LLInventoryItem::importFile(LLFILE* fp)
 		}
 		else
 		{
-			llwarns << "unknown keyword '" << keyword
-					<< "' in inventory import of item " << mUUID << llendl;
+			LL_WARNS() << "unknown keyword '" << keyword
+					<< "' in inventory import of item " << mUUID << LL_ENDL;
 		}
 	}
 
@@ -738,7 +734,7 @@ BOOL LLInventoryItem::importFile(LLFILE* fp)
 	if((LLInventoryType::IT_NONE == mInventoryType)
 	   || !inventory_and_asset_types_match(mInventoryType, mType))
 	{
-		lldebugs << "Resetting inventory type for " << mUUID << llendl;
+		LL_DEBUGS() << "Resetting inventory type for " << mUUID << LL_ENDL;
 		mInventoryType = LLInventoryType::defaultForAssetType(mType);
 	}
 
@@ -921,7 +917,7 @@ BOOL LLInventoryItem::importLegacyStream(std::istream& input_stream)
 			const char *donkey = mDescription.c_str();
 			if (donkey[0] == '|')
 			{
-				llerrs << "Donkey" << llendl;
+				LL_ERRS() << "Donkey" << LL_ENDL;
 			}
 			*/
 		}
@@ -933,8 +929,8 @@ BOOL LLInventoryItem::importLegacyStream(std::istream& input_stream)
 		}
 		else
 		{
-			llwarns << "unknown keyword '" << keyword
-					<< "' in inventory import of item " << mUUID << llendl;
+			LL_WARNS() << "unknown keyword '" << keyword
+					<< "' in inventory import of item " << mUUID << LL_ENDL;
 		}
 	}
 
@@ -944,7 +940,7 @@ BOOL LLInventoryItem::importLegacyStream(std::istream& input_stream)
 	if((LLInventoryType::IT_NONE == mInventoryType)
 	   || !inventory_and_asset_types_match(mInventoryType, mType))
 	{
-		lldebugs << "Resetting inventory type for " << mUUID << llendl;
+		LL_DEBUGS() << "Resetting inventory type for " << mUUID << LL_ENDL;
 		mInventoryType = LLInventoryType::defaultForAssetType(mType);
 	}
 
@@ -1047,11 +1043,17 @@ void LLInventoryItem::asLLSD( LLSD& sd ) const
 
 LLFastTimer::DeclareTimer FTM_INVENTORY_SD_DESERIALIZE("Inventory SD Deserialize");
 
-bool LLInventoryItem::fromLLSD(const LLSD& sd)
+bool LLInventoryItem::fromLLSD(const LLSD& sd, bool is_new)
 {
+
 	LLFastTimer _(FTM_INVENTORY_SD_DESERIALIZE);
-	mInventoryType = LLInventoryType::IT_NONE;
-	mAssetUUID.setNull();
+	if (is_new)
+	{
+		// If we're adding LLSD to an existing object, need avoid
+		// clobbering these fields.
+		mInventoryType = LLInventoryType::IT_NONE;
+		mAssetUUID.setNull();
+	}
 	std::string w;
 
 	w = INV_ITEM_ID_LABEL;
@@ -1108,6 +1110,11 @@ bool LLInventoryItem::fromLLSD(const LLSD& sd)
 	{
 		mAssetUUID = sd[w];
 	}
+	w = INV_LINKED_ID_LABEL;
+	if (sd.has(w))
+	{
+		mAssetUUID = sd[w];
+	}
 	w = INV_ASSET_TYPE_LABEL;
 	if (sd.has(w))
 	{
@@ -1119,11 +1126,6 @@ bool LLInventoryItem::fromLLSD(const LLSD& sd)
 		{
 			S8 type = (U8)sd[w].asInteger();
 			mType = static_cast<LLAssetType::EType>(type);
-		}
-		
-		if (mType == LLAssetType::AT_LINK || mType == LLAssetType::AT_LINK_FOLDER)
-		{
-			gHippoGridManager->getConnectedGrid()->setSupportsInvLinks(true);			
 		}
 	}
 	w = INV_INVENTORY_TYPE_LABEL;
@@ -1169,7 +1171,7 @@ bool LLInventoryItem::fromLLSD(const LLSD& sd)
 		// Because WT_UNKNOWN now has locally a special meaning, make sure we don't receive it from the server.
 		if (wt == WT_UNKNOWN)
 		{
-			lldebugs << "Received inventory item with wearable type WT_UNKNOWN from server!" << llendl;
+			LL_DEBUGS() << "Received inventory item with wearable type WT_UNKNOWN from server!" << LL_ENDL;
 			// Change this new wearable type to WT_COUNT, as if when we had not inserted WT_UNKNOWN locally.
 			mFlags += 1;
 			wt = WT_COUNT;
@@ -1210,7 +1212,7 @@ bool LLInventoryItem::fromLLSD(const LLSD& sd)
 	if((LLInventoryType::IT_NONE == mInventoryType)
 	   || !inventory_and_asset_types_match(mInventoryType, mType))
 	{
-		lldebugs << "Resetting inventory type for " << mUUID << llendl;
+		LL_DEBUGS() << "Resetting inventory type for " << mUUID << LL_ENDL;
 		mInventoryType = LLInventoryType::defaultForAssetType(mType);
 	}
 
@@ -1283,7 +1285,7 @@ void LLInventoryItem::unpackBinaryBucket(U8* bin_bucket, S32 bin_bucket_size)
 
 	if (NULL == bin_bucket)
 	{
-		llerrs << "unpackBinaryBucket failed.  bin_bucket is NULL." << llendl;
+		LL_ERRS() << "unpackBinaryBucket failed.  bin_bucket is NULL." << LL_ENDL;
 		return;
 	}
 
@@ -1293,7 +1295,7 @@ void LLInventoryItem::unpackBinaryBucket(U8* bin_bucket, S32 bin_bucket_size)
 	item_buffer[bin_bucket_size] = '\0';
 	std::string str(&item_buffer[0]);
 
-	lldebugs << "item buffer: " << str << llendl;
+	LL_DEBUGS() << "item buffer: " << str << LL_ENDL;
 
 	// Tokenize the string.
 	typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
@@ -1330,7 +1332,7 @@ void LLInventoryItem::unpackBinaryBucket(U8* bin_bucket, S32 bin_bucket_size)
 	perm.init(creator_id, owner_id, last_owner_id, group_id);
 	perm.initMasks(mask_base, mask_owner, mask_group, mask_every, mask_next);
 	setPermissions(perm);
-	//lldebugs << "perm: " << perm << llendl;
+	//LL_DEBUGS() << "perm: " << perm << LL_ENDL;
 
 	LLUUID asset_id((*(iter++)).c_str());
 	setAssetUUID(asset_id);
@@ -1531,8 +1533,8 @@ BOOL LLInventoryCategory::importFile(LLFILE* fp)
 		}
 		else
 		{
-			llwarns << "unknown keyword '" << keyword
-					<< "' in inventory import category "  << mUUID << llendl;
+			LL_WARNS() << "unknown keyword '" << keyword
+					<< "' in inventory import category "  << mUUID << LL_ENDL;
 		}
 	}
 	return TRUE;
@@ -1610,8 +1612,8 @@ BOOL LLInventoryCategory::importLegacyStream(std::istream& input_stream)
 		}
 		else
 		{
-			llwarns << "unknown keyword '" << keyword
-					<< "' in inventory import category "  << mUUID << llendl;
+			LL_WARNS() << "unknown keyword '" << keyword
+					<< "' in inventory import category "  << mUUID << LL_ENDL;
 		}
 	}
 	return TRUE;
@@ -1642,8 +1644,8 @@ LLSD ll_create_sd_from_inventory_item(LLPointer<LLInventoryItem> item)
 	if(item.isNull()) return rv;
 	if (item->getType() == LLAssetType::AT_NONE)
 	{
-		llwarns << "ll_create_sd_from_inventory_item() for item with AT_NONE"
-			<< llendl;
+		LL_WARNS() << "ll_create_sd_from_inventory_item() for item with AT_NONE"
+			<< LL_ENDL;
 		return rv;
 	}
 	rv[INV_ITEM_ID_LABEL] =  item->getUUID();
@@ -1668,8 +1670,8 @@ LLSD ll_create_sd_from_inventory_category(LLPointer<LLInventoryCategory> cat)
 	if(cat.isNull()) return rv;
 	if (cat->getType() == LLAssetType::AT_NONE)
 	{
-		llwarns << "ll_create_sd_from_inventory_category() for cat with AT_NONE"
-			<< llendl;
+		LL_WARNS() << "ll_create_sd_from_inventory_category() for cat with AT_NONE"
+			<< LL_ENDL;
 		return rv;
 	}
 	rv[INV_FOLDER_ID_LABEL] = cat->getUUID();

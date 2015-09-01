@@ -642,12 +642,12 @@ void LLPanelPrimMediaControls::updateShape()
 		// convert screenspace bbox to pixels (in screen coords)
 		LLRect window_rect = gViewerWindow->getWorldViewRectScaled();
 		LLCoordGL screen_min;
-		screen_min.mX = llmath::llround((F32)window_rect.mLeft + (F32)window_rect.getWidth() * (min.getF32ptr()[VX] + 1.f) * 0.5f);
-		screen_min.mY = llmath::llround((F32)window_rect.mBottom + (F32)window_rect.getHeight() * (min.getF32ptr()[VY] + 1.f) * 0.5f);
+		screen_min.mX = ll_round((F32)window_rect.mLeft + (F32)window_rect.getWidth() * (min.getF32ptr()[VX] + 1.f) * 0.5f);
+		screen_min.mY = ll_round((F32)window_rect.mBottom + (F32)window_rect.getHeight() * (min.getF32ptr()[VY] + 1.f) * 0.5f);
 		
 		LLCoordGL screen_max;
-		screen_max.mX = llmath::llround((F32)window_rect.mLeft + (F32)window_rect.getWidth() * (max.getF32ptr()[VX] + 1.f) * 0.5f);
-		screen_max.mY = llmath::llround((F32)window_rect.mBottom + (F32)window_rect.getHeight() * (max.getF32ptr()[VY] + 1.f) * 0.5f);
+		screen_max.mX = ll_round((F32)window_rect.mLeft + (F32)window_rect.getWidth() * (max.getF32ptr()[VX] + 1.f) * 0.5f);
+		screen_max.mY = ll_round((F32)window_rect.mBottom + (F32)window_rect.getHeight() * (max.getF32ptr()[VY] + 1.f) * 0.5f);
 		
 		// grow panel so that screenspace bounding box fits inside "media_region" element of panel
 		LLRect media_panel_rect;
@@ -839,7 +839,7 @@ bool LLPanelPrimMediaControls::isMouseOver()
 			if(hit_child && hit_child->getVisible())
 			{
 				// This was useful for debugging both coordinate translation and view hieararchy problems...
-				// llinfos << "mouse coords: " << x << ", " << y << " hit child " << hit_child->getName() << llendl;
+				// LL_INFOS() << "mouse coords: " << x << ", " << y << " hit child " << hit_child->getName() << LL_ENDL;
 
 				// This will be a direct child of the LLLayoutStack, which should be a layout_panel.
 				// These may not shown/hidden by the logic in updateShape(), so we need to do another hit test on the children of the layout panel,
@@ -850,7 +850,7 @@ bool LLPanelPrimMediaControls::isMouseOver()
 				if(hit_child_2 && hit_child_2->getVisible())
 				{
 					// This was useful for debugging both coordinate translation and view hieararchy problems...
-					// llinfos << "    mouse coords: " << x << ", " << y << " hit child 2 " << hit_child_2->getName() << llendl;
+					// LL_INFOS() << "    mouse coords: " << x << ", " << y << " hit child 2 " << hit_child_2->getName() << LL_ENDL;
 					result = true;
 				}
 			}

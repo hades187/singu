@@ -312,7 +312,7 @@ LLTextEditor::LLTextEditor(
 
 	updateTextRect();
 
-	S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+	S32 line_height = ll_round( mGLFont->getLineHeight() );
 	S32 page_size = mTextRect.getHeight() / line_height;
 
 	// Init the scrollbar
@@ -392,7 +392,7 @@ void LLTextEditor::spell_correct(void* data)
 	LLTextEditor* line = tempBind->origin;
 	if(tempBind && line)
 	{
-		llinfos << tempBind->menuItem->getName() << " : " << tempBind->origin->getName() << " : " << tempBind->word << llendl;
+		LL_INFOS() << tempBind->menuItem->getName() << " : " << tempBind->origin->getName() << " : " << tempBind->word << LL_ENDL;
 		if(line)line->spellReplace(tempBind);
 	}
 }
@@ -675,7 +675,7 @@ const std::string& LLTextEditor::getText() const
 	{
 		if (mAllowEmbeddedItems)
 		{
-			llwarns << "getText() called on text with embedded items (not supported)" << llendl;
+			LL_WARNS() << "getText() called on text with embedded items (not supported)" << LL_ENDL;
 		}
 		mUTF8Text = wstring_to_utf8str(mWText);
 		mTextIsUpToDate = TRUE;
@@ -890,10 +890,10 @@ S32 LLTextEditor::getLineStart( S32 line ) const
 	S32 res = seg->getStart() + segoffset;
 	if (res > seg->getEnd()) 
 	{
-		//llerrs << "wtf" << llendl;
+		//LL_ERRS() << "wtf" << LL_ENDL;
 		// This happens when creating a new notecard using the AO on certain opensims.
 		// Play it safe instead of bringing down the viewer - MC
-		llwarns << "BAD JOOJOO! Text length (" << res << ") greater than text end (" << seg->getEnd() << "). Setting line start to " << seg->getEnd() << llendl;
+		LL_WARNS() << "BAD JOOJOO! Text length (" << res << ") greater than text end (" << seg->getEnd() << "). Setting line start to " << seg->getEnd() << LL_ENDL;
 		res = seg->getEnd();
 	}
 	return res;
@@ -970,7 +970,7 @@ S32 LLTextEditor::getCursorPosFromLocalCoord( S32 local_x, S32 local_y, BOOL rou
 
 	// Figure out which line we're nearest to.
 	S32 total_lines = getLineCount();
-	S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+	S32 line_height = ll_round( mGLFont->getLineHeight() );
 	S32 max_visible_lines = mTextRect.getHeight() / line_height;
 	S32 scroll_lines = mScrollbar->getDocPos();
 	S32 visible_lines = llmin( total_lines - scroll_lines, max_visible_lines );			// Lines currently visible 
@@ -1499,7 +1499,7 @@ BOOL LLTextEditor::handleHover(S32 x, S32 y, MASK mask)
 			mSelectionEnd = mCursorPos;
 		}
 
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (active)" << llendl;		
+		LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (active)" << LL_ENDL;		
 		getWindow()->setCursor(UI_CURSOR_IBEAM);
 		handled = TRUE;
 	}
@@ -1527,14 +1527,14 @@ BOOL LLTextEditor::handleHover(S32 x, S32 y, MASK mask)
 			{
 				if(cur_segment->getStyle()->isLink())
 				{
-					lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (over link, inactive)" << llendl;		
+					LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (over link, inactive)" << LL_ENDL;		
 					getWindow()->setCursor(UI_CURSOR_HAND);
 					handled = TRUE;
 				}
 				else
 				if(cur_segment->getStyle()->getIsEmbeddedItem())
 				{
-					lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (over embedded item, inactive)" << llendl;		
+					LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (over embedded item, inactive)" << LL_ENDL;		
 					getWindow()->setCursor(UI_CURSOR_HAND);
 					//getWindow()->setCursor(UI_CURSOR_ARROW);
 					handled = TRUE;
@@ -1545,7 +1545,7 @@ BOOL LLTextEditor::handleHover(S32 x, S32 y, MASK mask)
 
 		if( !handled )
 		{
-			lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (inactive)" << llendl;		
+			LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (inactive)" << LL_ENDL;		
 			if (!mScrollbar->getVisible() || x < getRect().getWidth() - SCROLLBAR_SIZE)
 			{
 				getWindow()->setCursor(UI_CURSOR_IBEAM);
@@ -1817,10 +1817,10 @@ void LLTextEditor::removeChar()
 // Remove a word (set of characters up to next space/punctuation) from the text
 void LLTextEditor::removeWord(bool prev)
 {
-	const U32 pos(mCursorPos);
-	if (prev ? pos > 0 : static_cast<S32>(pos) < getLength())
+	const S32& pos(mCursorPos);
+	if (prev ? pos > 0 : pos < getLength())
 	{
-		U32 new_pos(prev ? prevWordPos(pos) : nextWordPos(pos));
+		S32 new_pos(prev ? prevWordPos(pos) : nextWordPos(pos));
 		if (new_pos == pos) // Other character we don't jump over
 			new_pos = prev ? prevWordPos(new_pos-1) : nextWordPos(new_pos+1);
 
@@ -2368,6 +2368,13 @@ BOOL LLTextEditor::handleControlKey(const KEY key, const MASK mask)
 			}
 			break;
 
+		case KEY_DELETE:
+			if (getEnabled())
+				removeWord(false);
+			else
+				handled = false;
+			break;
+
 		default:
 			handled = FALSE;
 			break;
@@ -2482,17 +2489,6 @@ BOOL LLTextEditor::handleSpecialKey(const KEY key, const MASK mask, BOOL* return
 		else
 		{
 			reportBadKeystroke();
-		}
-		break;
-
-	case KEY_DELETE:
-		if (getEnabled() && mask == MASK_CONTROL)
-		{
-			removeWord(false);
-		}
-		else
-		{
-			handled = false;
 		}
 		break;
 
@@ -2927,7 +2923,7 @@ void LLTextEditor::drawSelectionBackground()
 		const S32 text_len = getLength();
 		std::queue<S32> line_endings;
 
-		S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+		S32 line_height = ll_round( mGLFont->getLineHeight() );
 
 		S32 selection_left		= llmin( mSelectionStart, mSelectionEnd );
 		S32 selection_right		= llmax( mSelectionStart, mSelectionEnd );
@@ -3122,7 +3118,7 @@ void LLTextEditor::drawMisspelled()
 
 				S32 line_end = 0;
 				// Determine if the cursor is visible and if so what its coordinates are.
-				while( (mTextRect.mBottom <= llmath::llround(text_y)) && (search_pos < num_lines))
+				while( (mTextRect.mBottom <= ll_round(text_y)) && (search_pos < num_lines))
 				{
 					line_end = text_len + 1;
 					S32 next_line = -1;
@@ -3197,7 +3193,7 @@ void LLTextEditor::drawCursor()
 
 		S32 line_end = 0;
 		// Determine if the cursor is visible and if so what its coordinates are.
-		while( (mTextRect.mBottom <= llmath::llround(text_y)) && (cur_pos < num_lines))
+		while( (mTextRect.mBottom <= ll_round(text_y)) && (cur_pos < num_lines))
 		{
 			line_end = text_len + 1;
 			S32 next_line = -1;
@@ -3316,7 +3312,7 @@ void LLTextEditor::drawPreeditMarker()
 		return;
 	}
 		
-	const S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+	const S32 line_height = ll_round( mGLFont->getLineHeight() );
 
 	S32 line_start = getLineStart(cur_line);
 	S32 line_y = mTextRect.mTop - line_height;
@@ -3436,7 +3432,7 @@ void LLTextEditor::drawText()
 	if (seg_iter == mSegments.end() || (*seg_iter)->getStart() > line_start) --seg_iter;
 	LLTextSegment* cur_segment = *seg_iter;
 	
-	S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+	S32 line_height = ll_round( mGLFont->getLineHeight() );
 	F32 text_y = (F32)(mTextRect.mTop - line_height);
 	while((mTextRect.mBottom <= text_y) && (cur_line < num_lines))
 	{
@@ -3461,13 +3457,13 @@ void LLTextEditor::drawText()
 		if( mShowLineNumbers && !cur_line_is_continuation) 
 		{
 			const LLFontGL *num_font = LLFontGL::getFontMonospace();
-			F32 y_top = text_y + ((F32)llmath::llround(num_font->getLineHeight()) / 2);
-			const LLWString ltext = utf8str_to_wstring(llformat("%*d", UI_TEXTEDITOR_LINE_NUMBER_DIGITS, cur_line_num ));
+			F32 y_top = text_y + ((F32)ll_round(num_font->getLineHeight()) / 2);
 			BOOL is_cur_line = getCurrentLine() == cur_line_num;
 			const U8 style = is_cur_line ? LLFontGL::BOLD : LLFontGL::NORMAL;
 			const LLColor4 fg_color = is_cur_line ? mCursorColor : mReadOnlyFgColor;
-			num_font->render( 
-				ltext, // string to draw
+
+			num_font->renderUTF8(
+				llformat("%*d", UI_TEXTEDITOR_LINE_NUMBER_DIGITS, cur_line_num), // string to draw
 				0, // begin offset
 				3., // x
 				y_top, // y
@@ -3477,7 +3473,8 @@ void LLTextEditor::drawText()
 				style, 
 				LLFontGL::NO_SHADOW,
 				S32_MAX, // max chars
-				UI_TEXTEDITOR_LINE_NUMBER_MARGIN); // max pixels
+				UI_TEXTEDITOR_LINE_NUMBER_MARGIN,
+				NULL); // max pixels
 		}
 
 		S32 seg_start = line_start;
@@ -3488,7 +3485,7 @@ void LLTextEditor::drawText()
 				seg_iter++;
 				if (seg_iter == mSegments.end())
 				{
-					llwarns << "Ran off the segmentation end!" << llendl;
+					LL_WARNS() << "Ran off the segmentation end!" << LL_ENDL;
 					return;
 				}
 				cur_segment = *seg_iter;
@@ -3505,7 +3502,7 @@ void LLTextEditor::drawText()
 					S32 style_image_height = style->mImageHeight;
 					S32 style_image_width = style->mImageWidth;
 					LLUIImagePtr image = style->getImage();
-					image->draw(llmath::llround(text_x), llmath::llround(text_y)+line_height-style_image_height, 
+					image->draw(ll_round(text_x), ll_round(text_y)+line_height-style_image_height, 
 						style_image_width, style_image_height);
 				}
 
@@ -3592,7 +3589,7 @@ void LLTextEditor::drawClippedSegment(const LLWString &text, S32 seg_start, S32 
 		}
 	}
 
-	F32 y_top = y + (F32)llmath::llround(font->getLineHeight());
+	F32 y_top = y + (F32)ll_round(font->getLineHeight());
 
   	if( selection_left > seg_start )
 	{
@@ -3995,7 +3992,7 @@ void LLTextEditor::reshape(S32 width, S32 height, BOOL called_from_parent)
 	// propagate shape information to scrollbar
 	mScrollbar->setDocSize( getLineCount() );
 
-	S32 line_height = llmath::llround( mGLFont->getLineHeight() );
+	S32 line_height = ll_round( mGLFont->getLineHeight() );
 	S32 page_lines = mTextRect.getHeight() / line_height;
 	mScrollbar->setPageSize( page_lines );
 }
@@ -4461,7 +4458,7 @@ void LLTextEditor::pruneSegments()
 	}
 	else
 	{
-		llwarns << "Tried to erase end of empty LLTextEditor" << llendl;
+		LL_WARNS() << "Tried to erase end of empty LLTextEditor" << LL_ENDL;
 	}
 }
 
@@ -4605,20 +4602,20 @@ BOOL LLTextEditor::importBuffer(const char* buffer, S32 length )
 	instream.getline(tbuf, MAX_STRING);
 	if( 1 != sscanf(tbuf, "Linden text version %d", &version) )
 	{
-		llwarns << "Invalid Linden text file header " << llendl;
+		LL_WARNS() << "Invalid Linden text file header " << LL_ENDL;
 		return FALSE;
 	}
 
 	if( 1 != version )
 	{
-		llwarns << "Invalid Linden text file version: " << version << llendl;
+		LL_WARNS() << "Invalid Linden text file version: " << version << LL_ENDL;
 		return FALSE;
 	}
 
 	instream.getline(tbuf, MAX_STRING);
 	if( 0 != sscanf(tbuf, "{") )
 	{
-		llwarns << "Invalid Linden text file format" << llendl;
+		LL_WARNS() << "Invalid Linden text file format" << LL_ENDL;
 		return FALSE;
 	}
 
@@ -4626,13 +4623,13 @@ BOOL LLTextEditor::importBuffer(const char* buffer, S32 length )
 	instream.getline(tbuf, MAX_STRING);
 	if( 1 != sscanf(tbuf, "Text length %d", &text_len) )
 	{
-		llwarns << "Invalid Linden text length field" << llendl;
+		LL_WARNS() << "Invalid Linden text length field" << LL_ENDL;
 		return FALSE;
 	}
 
 	if( text_len > mMaxTextByteLength )
 	{
-		llwarns << "Invalid Linden text length: " << text_len << llendl;
+		LL_WARNS() << "Invalid Linden text length: " << text_len << LL_ENDL;
 		return FALSE;
 	}
 
@@ -4641,21 +4638,21 @@ BOOL LLTextEditor::importBuffer(const char* buffer, S32 length )
 	char* text = new char[ text_len + 1];
 	if (text == NULL)
 	{
-		llerrs << "Memory allocation failure." << llendl;			
+		LL_ERRS() << "Memory allocation failure." << LL_ENDL;			
 		return FALSE;
 	}
 	instream.get(text, text_len + 1, '\0');
 	text[text_len] = '\0';
 	if( text_len != (S32)strlen(text) )/* Flawfinder: ignore */
 	{
-		llwarns << llformat("Invalid text length: %d != %d ",strlen(text),text_len) << llendl;/* Flawfinder: ignore */
+		LL_WARNS() << llformat("Invalid text length: %d != %d ",strlen(text),text_len) << LL_ENDL;/* Flawfinder: ignore */
 		success = FALSE;
 	}
 
 	instream.getline(tbuf, MAX_STRING);
 	if( success && (0 != sscanf(tbuf, "}")) )
 	{
-		llwarns << "Invalid Linden text file format: missing terminal }" << llendl;
+		LL_WARNS() << "Invalid Linden text file format: missing terminal }" << LL_ENDL;
 		success = FALSE;
 	}
 
@@ -4746,13 +4743,13 @@ BOOL LLTextSegment::getToolTip(std::string& msg) const
 
 void LLTextSegment::dump() const
 {
-	llinfos << "Segment [" << 
+	LL_INFOS() << "Segment [" << 
 //			mColor.mV[VX] << ", " <<
 //			mColor.mV[VY] << ", " <<
 //			mColor.mV[VZ] << "]\t[" <<
 		mStart << ", " <<
 		getEnd() << "]" <<
-		llendl;
+		LL_ENDL;
 
 }
 
@@ -5048,7 +5045,7 @@ void LLTextEditor::resetPreedit()
 	{
 		if (hasSelection())
 		{
-			llwarns << "Preedit and selection!" << llendl;
+			LL_WARNS() << "Preedit and selection!" << LL_ENDL;
 			deselect();
 		}
 
@@ -5162,7 +5159,7 @@ BOOL LLTextEditor::getPreeditLocation(S32 query_offset, LLCoordGL *coord, LLRect
 	}
 
 	const llwchar * const text = mWText.c_str();
-	const S32 line_height = llmath::llround(mGLFont->getLineHeight());
+	const S32 line_height = ll_round(mGLFont->getLineHeight());
 
 	if (coord)
 	{
@@ -5237,7 +5234,7 @@ void LLTextEditor::markAsPreedit(S32 position, S32 length)
 	setCursorPos(position);
 	if (hasPreeditString())
 	{
-		llwarns << "markAsPreedit invoked when hasPreeditString is true." << llendl;
+		LL_WARNS() << "markAsPreedit invoked when hasPreeditString is true." << LL_ENDL;
 	}
 	mPreeditWString = LLWString( mWText, position, length );
 	if (length > 0)
@@ -5265,7 +5262,7 @@ void LLTextEditor::markAsPreedit(S32 position, S32 length)
 
 S32 LLTextEditor::getPreeditFontSize() const
 {
-	return llmath::llround(mGLFont->getLineHeight() * LLUI::getScaleFactor().mV[VY]);
+	return ll_round(mGLFont->getLineHeight() * LLUI::getScaleFactor().mV[VY]);
 }
 
 void LLTextEditor::setKeystrokeCallback(const keystroke_signal_t::slot_type& callback)

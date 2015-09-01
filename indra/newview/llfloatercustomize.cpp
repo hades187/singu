@@ -146,7 +146,7 @@ LLFloaterCustomize::LLFloaterCustomize()
 
 LLFloaterCustomize::~LLFloaterCustomize()
 {
-	llinfos << "Destroying LLFloaterCustomize" << llendl;
+	LL_INFOS() << "Destroying LLFloaterCustomize" << LL_ENDL;
 	mResetParams = NULL;
 	gInventory.removeObserver(mInventoryObserver);
 	delete mInventoryObserver;
@@ -469,23 +469,23 @@ void LLFloaterCustomize::onBtnExport()
 
 	// Determine if the currently selected wearable is modifiable.
 	LLWearableType::EType edit_type = getCurrentWearableType();
-	bool is_modifiable = false;
+	bool is_modifiable = true;
 	LLViewerWearable* old_wearable = gAgentWearables.getViewerWearable(edit_type, edit_index);
 	if (old_wearable)
 	{
 		LLViewerInventoryItem* item = gInventory.getItem(old_wearable->getItemID());
-		if (item)
+//		if (item)
 		{
-			LLPermissions const& perm = item->getPermissions();
+//			LLPermissions const& perm = item->getPermissions();
 			// Modifiable means the user can see the sliders and type them over into a file anyway.
-			is_modifiable = perm.allowModifyBy(gAgent.getID(), gAgent.getGroupID());
+//			is_modifiable = perm.allowModifyBy(gAgent.getID(), gAgent.getGroupID());
 		}
 	}
 
 	if (!is_modifiable)
 	{
 		// We should never get here, because in that case the Export button is disabled.
-		llwarns << "Cannot export current wearable \"" << name << "\" of type " << (int)edit_type << "because user lacks modify permissions." << llendl;
+		LL_WARNS() << "Cannot export current wearable \"" << name << "\" of type " << (int)edit_type << "because user lacks modify permissions." << LL_ENDL;
 		return;
 	}
 
@@ -741,7 +741,7 @@ void LLFloaterCustomize::saveCurrentWearables()
 					LLAppearanceMgr::instance().findCOFItemLinks(wearable->getItemID());
 				if (links.size()>0)
 				{
-					link_item = links.get(0).get();
+					link_item = links.at(0).get();
 					if (link_item && link_item->getIsLinkType())
 					{
 						description = link_item->getActualDescription();
@@ -753,15 +753,11 @@ void LLFloaterCustomize::saveCurrentWearables()
 				if (link_item)
 				{
 					// Create new link
-					link_inventory_item( gAgent.getID(),
-										 link_item->getLinkedUUID(),
+					link_inventory_object(
 										 LLAppearanceMgr::instance().getCOF(),
-										 link_item->getName(),
-										 description,
-										 LLAssetType::AT_LINK,
-										 NULL);
+										 link_item, NULL);
 					// Remove old link
-					gInventory.purgeObject(link_item->getUUID());
+					remove_inventory_object(link_item->getUUID(), NULL);
 				}
 			}
 			gAgentWearables.saveWearable( cur, i );

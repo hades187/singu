@@ -943,7 +943,7 @@ void LLPanelLandGeneral::onClickRelease(void*)
 // static
 void LLPanelLandGeneral::onClickReclaim(void*)
 {
-	lldebugs << "LLPanelLandGeneral::onClickReclaim()" << llendl;
+	LL_DEBUGS() << "LLPanelLandGeneral::onClickReclaim()" << LL_ENDL;
 	LLViewerParcelMgr::getInstance()->reclaimParcel();
 }
 
@@ -1228,7 +1228,7 @@ void LLPanelLandObjects::refresh()
 	{
 		S32 sw_max = parcel->getSimWideMaxPrimCapacity();
 		S32 sw_total = parcel->getSimWidePrimCount();
-		S32 max = llmath::llround(parcel->getMaxPrimCapacity() * parcel->getParcelPrimBonus());
+		S32 max = ll_round(parcel->getMaxPrimCapacity() * parcel->getParcelPrimBonus());
 		S32 total = parcel->getPrimCount();
 		S32 owned = parcel->getOwnerPrimCount();
 		S32 group = parcel->getGroupPrimCount();
@@ -1547,8 +1547,8 @@ void LLPanelLandObjects::processParcelObjectOwnersReply(LLMessageSystem *msg, vo
 
 	if (!self)
 	{
-		llwarns << "Received message for nonexistent LLPanelLandObject"
-				<< llendl;
+		LL_WARNS() << "Received message for nonexistent LLPanelLandObject"
+				<< LL_ENDL;
 		return;
 	}
 	
@@ -1574,8 +1574,7 @@ void LLPanelLandObjects::processParcelObjectOwnersReply(LLMessageSystem *msg, vo
 
 	LLVector3d mypos = gAgent.getPositionGlobal();
 	std::vector<LLUUID> avatar_ids;
-	std::vector<LLVector3d> positions;
-	LLWorld::instance().getAvatars(&avatar_ids, &positions, mypos, F32_MAX);
+	LLWorld::instance().getAvatars(&avatar_ids, NULL, mypos, F32_MAX);
 
 	for(S32 i = 0; i < rows; ++i)
 	{
@@ -1630,8 +1629,8 @@ void LLPanelLandObjects::processParcelObjectOwnersReply(LLMessageSystem *msg, vo
 
 		self->mOwnerList->addNameItemRow(item_params);
 
-		lldebugs << "object owner " << owner_id << " (" << (is_group_owned ? "group" : "agent")
-				<< ") owns " << object_count << " objects." << llendl;
+		LL_DEBUGS() << "object owner " << owner_id << " (" << (is_group_owned ? "group" : "agent")
+				<< ") owns " << object_count << " objects." << LL_ENDL;
 	}
 	// check for no results
 	if (0 == self->mOwnerList->getItemCount())
@@ -1948,7 +1947,7 @@ BOOL LLPanelLandOptions::postBuild()
 	}
 	else
 	{
-		llwarns << "LLUICtrlFactory::getTexturePickerByName() returned NULL for 'snapshot_ctrl'" << llendl;
+		LL_WARNS() << "LLUICtrlFactory::getTexturePickerByName() returned NULL for 'snapshot_ctrl'" << LL_ENDL;
 	}
 
 
@@ -2106,9 +2105,9 @@ void LLPanelLandOptions::refresh()
 		else
 		{
 			mLocationText->setTextArg("[LANDING]",llformat("%d, %d, %d",
-														   llmath::llround(pos.mV[VX]),
-														   llmath::llround(pos.mV[VY]),
-														   llmath::llround(pos.mV[VZ])));
+														   ll_round(pos.mV[VX]),
+														   ll_round(pos.mV[VY]),
+														   ll_round(pos.mV[VZ])));
 		}
 
 		mSetBtn->setEnabled( can_change_landing_point );

@@ -126,7 +126,7 @@ public:
 	virtual BOOL isItemMovable() const;
 	virtual BOOL isItemRemovable() const;
 	virtual BOOL removeItem();
-	virtual void removeBatch(LLDynamicArray<LLFolderViewEventListener*>& batch);
+	virtual void removeBatch(std::vector<LLFolderViewEventListener*>& batch);
 	virtual void move(LLFolderViewEventListener* parent_listener);
 	virtual BOOL isItemCopyable() const;
 	virtual BOOL copyToClipboard() const;
@@ -218,7 +218,7 @@ struct LLBuyInvItemData
 
 void LLTaskInvFVBridge::buyItem()
 {
-	llinfos << "LLTaskInvFVBridge::buyItem()" << llendl;
+	LL_INFOS() << "LLTaskInvFVBridge::buyItem()" << LL_ENDL;
 	LLInventoryItem* item = findItem();
 	if(!item || !item->getSaleInfo().isForSale()) return;
 	LLBuyInvItemData* inv = new LLBuyInvItemData(mPanel->getTaskUUID(),
@@ -233,7 +233,7 @@ void LLTaskInvFVBridge::buyItem()
 	if( ( obj = gObjectList.findObject( mPanel->getTaskUUID() ) ) && obj->isAttachment() )
 	{
 		LLNotificationsUtil::add("Cannot_Purchase_an_Attachment");
-		llinfos << "Attempt to purchase an attachment" << llendl;
+		LL_INFOS() << "Attempt to purchase an attachment" << LL_ENDL;
 		delete inv;
 	}
 	else
@@ -369,7 +369,7 @@ LLUIImagePtr LLTaskInvFVBridge::getIcon() const
 void LLTaskInvFVBridge::openItem()
 {
 	// no-op.
-	lldebugs << "LLTaskInvFVBridge::openItem()" << llendl;
+	LL_DEBUGS() << "LLTaskInvFVBridge::openItem()" << LL_ENDL;
 }
 
 void LLTaskInvFVBridge::previewItem()
@@ -539,7 +539,7 @@ BOOL LLTaskInvFVBridge::removeItem()
 	return FALSE;
 }
 
-void LLTaskInvFVBridge::removeBatch(LLDynamicArray<LLFolderViewEventListener*>& batch)
+void LLTaskInvFVBridge::removeBatch(std::vector<LLFolderViewEventListener*>& batch)
 {
 	if (!mPanel)
 	{
@@ -615,7 +615,7 @@ void LLTaskInvFVBridge::pasteLinkFromClipboard()
 
 BOOL LLTaskInvFVBridge::startDrag(EDragAndDropType* type, LLUUID* id) const
 {
-	//llinfos << "LLTaskInvFVBridge::startDrag()" << llendl;
+	//LL_INFOS() << "LLTaskInvFVBridge::startDrag()" << LL_ENDL;
 	if(mPanel)
 	{
 		LLViewerObject* object = gObjectList.findObject(mPanel->getTaskUUID());
@@ -662,13 +662,13 @@ BOOL LLTaskInvFVBridge::dragOrDrop(MASK mask, BOOL drop,
 								   EDragAndDropType cargo_type,
 								   void* cargo_data)
 {
-	//llinfos << "LLTaskInvFVBridge::dragOrDrop()" << llendl;
+	//LL_INFOS() << "LLTaskInvFVBridge::dragOrDrop()" << LL_ENDL;
 	return FALSE;
 }
 
 //void LLTaskInvFVBridge::dropped()
 //{
-//	llwarns << "LLTaskInvFVBridge::dropped() - not implemented" << llendl;
+//	LL_WARNS() << "LLTaskInvFVBridge::dropped() - not implemented" << LL_ENDL;
 //}
 
 void pack_script_message(LLMessageSystem*, const LLInventoryItem*, const LLViewerObject*);
@@ -710,7 +710,7 @@ void LLTaskInvFVBridge::performAction(LLInventoryModel* model, std::string actio
 		S32 price = getPrice();
 		if (-1 == price)
 		{
-			llwarns << "label_buy_task_bridged_item: Invalid price" << llendl;
+			LL_WARNS() << "label_buy_task_bridged_item: Invalid price" << LL_ENDL;
 		}
 		else
 		{
@@ -771,7 +771,7 @@ void LLTaskInvFVBridge::buildContextMenu(LLMenuGL& menu, U32 flags)
 		S32 price = getPrice();
 		if (-1 == price)
 		{
-			llwarns << "label_buy_task_bridged_item: Invalid price" << llendl;
+			LL_WARNS() << "label_buy_task_bridged_item: Invalid price" << LL_ENDL;
 		}
 		else
 		{
@@ -935,7 +935,7 @@ void LLTaskCategoryBridge::openItem()
 
 BOOL LLTaskCategoryBridge::startDrag(EDragAndDropType* type, LLUUID* id) const
 {
-	//llinfos << "LLTaskInvFVBridge::startDrag()" << llendl;
+	//LL_INFOS() << "LLTaskInvFVBridge::startDrag()" << LL_ENDL;
 	if(mPanel && mUUID.notNull())
 	{
 		LLViewerObject* object = gObjectList.findObject(mPanel->getTaskUUID());
@@ -957,7 +957,7 @@ BOOL LLTaskCategoryBridge::dragOrDrop(MASK mask, BOOL drop,
 									  EDragAndDropType cargo_type,
 									  void* cargo_data)
 {
-	//llinfos << "LLTaskCategoryBridge::dragOrDrop()" << llendl;
+	//LL_INFOS() << "LLTaskCategoryBridge::dragOrDrop()" << LL_ENDL;
 	BOOL accept = FALSE;
 	LLViewerObject* object = gObjectList.findObject(mPanel->getTaskUUID());
 	if(object)
@@ -1054,7 +1054,7 @@ void LLTaskTextureBridge::openItem()
 	}
 // [/RLVa:KB]
 
-	llinfos << "LLTaskTextureBridge::openItem()" << llendl;
+	LL_INFOS() << "LLTaskTextureBridge::openItem()" << LL_ENDL;
 	if(!LLPreview::show(mUUID))
 	{
 		// There isn't one, so make a new preview
@@ -1148,7 +1148,7 @@ void LLTaskSoundBridge::buildContextMenu(LLMenuGL& menu, U32 flags)
 		S32 price = getPrice();
 		if (-1 == price)
 		{
-			llwarns << "label_buy_task_bridged_item: Invalid price" << llendl;
+			LL_WARNS() << "label_buy_task_bridged_item: Invalid price" << LL_ENDL;
 		}
 		else
 		{
@@ -1270,7 +1270,7 @@ public:
 
 void LLTaskLSLBridge::openItem()
 {
-	llinfos << "LLTaskLSLBridge::openItem() " << mUUID << llendl;
+	LL_INFOS() << "LLTaskLSLBridge::openItem() " << mUUID << LL_ENDL;
 	if(LLLiveLSLEditor::show(mUUID))
 	{
 		return;
@@ -1570,7 +1570,7 @@ LLTaskInvFVBridge* LLTaskInvFVBridge::createObjectBridge(LLPanelObjectInventory*
 		break;
 	case LLAssetType::AT_SCRIPT:
 		// OLD SCRIPTS DEPRECATED - JC
-		llwarns << "Old script" << llendl;
+		LL_WARNS() << "Old script" << LL_ENDL;
 		//new_bridge = new LLTaskOldScriptBridge(panel,
 		//									   object_id,
 		//									   object_name);
@@ -1615,8 +1615,8 @@ LLTaskInvFVBridge* LLTaskInvFVBridge::createObjectBridge(LLPanelObjectInventory*
 		break;
 		break;
 	default:
-		llinfos << "Unhandled inventory type (llassetstorage.h): "
-				<< (S32)type << llendl;
+		LL_INFOS() << "Unhandled inventory type (llassetstorage.h): "
+				<< (S32)type << LL_ENDL;
 		break;
 	}
 	return new_bridge;
@@ -1647,7 +1647,7 @@ LLPanelObjectInventory::~LLPanelObjectInventory()
 {
 	if (!gIdleCallbacks.deleteFunction(idle, this))
 	{
-		llwarns << "LLPanelObjectInventory::~LLPanelObjectInventory() failed to delete callback" << llendl;
+		LL_WARNS() << "LLPanelObjectInventory::~LLPanelObjectInventory() failed to delete callback" << LL_ENDL;
 	}
 }
 
@@ -1698,9 +1698,9 @@ void LLPanelObjectInventory::inventoryChanged(LLViewerObject* object,
 {
 	if(!object) return;
 
-	//llinfos << "invetnory arrived: \n"
+	//LL_INFOS() << "invetnory arrived: \n"
 	//		<< " panel UUID: " << panel->mTaskUUID << "\n"
-	//		<< " task  UUID: " << object->mID << llendl;
+	//		<< " task  UUID: " << object->mID << LL_ENDL;
 	if(mTaskUUID == object->mID)
 	{
 		mInventoryNeedsUpdate = TRUE;
@@ -1713,7 +1713,7 @@ void LLPanelObjectInventory::inventoryChanged(LLViewerObject* object,
 		// temporary object because we cannot iterate through the
 		// object inventory twice... A pox on stateful iteration!
 		LLFloaterProperties* floater = NULL;
-		LLDynamicArray<LLFloaterProperties*> refresh;
+		std::vector<LLFloaterProperties*> refresh;
 
 		LLInventoryObject::object_list_t::const_iterator it = inventory->begin();
 		LLInventoryObject::object_list_t::const_iterator end = inventory->end();
@@ -1723,22 +1723,22 @@ void LLPanelObjectInventory::inventoryChanged(LLViewerObject* object,
 												object->getID());
 			if(floater)
 			{
-				refresh.put(floater);
+				refresh.push_back(floater);
 			}
 		}
-		S32 count = refresh.count();
+		S32 count = refresh.size();
 		for(S32 i = 0; i < count; ++i)
 		{
-			refresh.get(i)->refresh();
+			refresh.at(i)->refresh();
 		}
 	}
 }
 
 void LLPanelObjectInventory::updateInventory()
 {
-	//llinfos << "inventory arrived: \n"
+	//LL_INFOS() << "inventory arrived: \n"
 	//		<< " panel UUID: " << panel->mTaskUUID << "\n"
-	//		<< " task  UUID: " << object->mID << llendl;
+	//		<< " task  UUID: " << object->mID << LL_ENDL;
 	// We're still interested in this task's inventory.
 	std::set<LLUUID> selected_items;
 	BOOL inventory_has_focus = FALSE;
@@ -1839,7 +1839,7 @@ void LLPanelObjectInventory::createViewsForCategory(LLInventoryObject::object_li
 											  LLFolderViewFolder* folder)
 {
 	// Find all in the first pass
-	LLDynamicArray<obj_folder_pair*> child_categories;
+	std::vector<obj_folder_pair*> child_categories;
 	LLTaskInvFVBridge* bridge;
 	LLFolderViewItem* view;
 
@@ -1864,7 +1864,7 @@ void LLPanelObjectInventory::createViewsForCategory(LLInventoryObject::object_li
 											  NULL,
 											  mFolders,
 											  bridge);
-				child_categories.put(new obj_folder_pair(obj,
+				child_categories.push_back(new obj_folder_pair(obj,
 														 (LLFolderViewFolder*)view));
 			}
 			else
@@ -1882,7 +1882,7 @@ void LLPanelObjectInventory::createViewsForCategory(LLInventoryObject::object_li
 	}
 
 	// now, for each category, do the second pass
-	for(S32 i = 0; i < child_categories.count(); i++)
+	for(U32 i = 0; i < child_categories.size(); i++)
 	{
 		createViewsForCategory(inventory, child_categories[i]->first,
 							   child_categories[i]->second );
@@ -1892,7 +1892,7 @@ void LLPanelObjectInventory::createViewsForCategory(LLInventoryObject::object_li
 
 void LLPanelObjectInventory::refresh()
 {
-	//llinfos << "LLPanelObjectInventory::refresh()" << llendl;
+	//LL_INFOS() << "LLPanelObjectInventory::refresh()" << LL_ENDL;
 	BOOL has_inventory = FALSE;
 	const BOOL non_root_ok = TRUE;
 	LLSelectNode* node = LLSelectMgr::getInstance()->getSelection()->getFirstRootNode(NULL, non_root_ok);
@@ -1945,7 +1945,7 @@ void LLPanelObjectInventory::refresh()
 		removeVOInventoryListener();
 		clearContents();
 	}
-	//llinfos << "LLPanelObjectInventory::refresh() " << mTaskUUID << llendl;
+	//LL_INFOS() << "LLPanelObjectInventory::refresh() " << mTaskUUID << LL_ENDL;
 }
 
 void LLPanelObjectInventory::removeSelectedItem()

@@ -176,7 +176,7 @@ void LLCloseAllFoldersFunctor::doItem(LLFolderViewItem* item)
 
 // Default constructor
 LLFolderView::LLFolderView( const std::string& name,
-						   const LLRect& rect, const LLUUID& source_id, LLPanel* parent_panel, LLFolderViewEventListener* listener ) :
+						   const LLRect& rect, const LLUUID& source_id, LLPanel* parent_panel, LLFolderViewEventListener* listener, LLFolderViewGroupedItemModel* group_model ) :
 #if LL_WINDOWS
 #pragma warning( push )
 #pragma warning( disable : 4355 ) // warning C4355: 'this' : used in base member initializer list
@@ -211,7 +211,8 @@ LLFolderView::LLFolderView( const std::string& name,
 	mUseEllipses(FALSE),
 	mDraggingOverItem(NULL),
 	mStatusTextBox(NULL),
-	mSearchType(1)
+	mSearchType(1),
+	mGroupedItemModel(group_model)
 {
 	LLPanel* panel = parent_panel;
 	mParentPanel = panel->getHandle();
@@ -535,7 +536,7 @@ S32 LLFolderView::arrange( S32* unused_width, S32* unused_height, S32 filter_gen
 	updateRenamerPosition();
 
 	mTargetHeight = (F32)target_height;
-	return llmath::llround(mTargetHeight);
+	return ll_round(mTargetHeight);
 }
 
 const std::string LLFolderView::getFilterSubString(BOOL trim)
@@ -1053,9 +1054,9 @@ void LLFolderView::removeCutItems()
 		return;
 
 	// Get the list of clipboard item uuids and iterate through them
-	LLDynamicArray<LLUUID> objects;
+	std::vector<LLUUID> objects;
 	LLInventoryClipboard::instance().retrieve(objects);
-	for (LLDynamicArray<LLUUID>::const_iterator iter = objects.begin();
+	for (std::vector<LLUUID>::const_iterator iter = objects.begin();
 		 iter != objects.end();
 		 ++iter)
 	{
@@ -1087,7 +1088,7 @@ void LLFolderView::removeSelectedItems( void )
 			}
 			else
 			{
-				llinfos << "Cannot delete " << item->getName() << llendl;
+				LL_INFOS() << "Cannot delete " << item->getName() << LL_ENDL;
 				return;
 			}
 		}
@@ -1123,7 +1124,7 @@ void LLFolderView::removeSelectedItems( void )
 		}
 		else if (count > 1)
 		{
-			LLDynamicArray<LLFolderViewEventListener*> listeners;
+			std::vector<LLFolderViewEventListener*> listeners;
 			LLFolderViewEventListener* listener;
 			LLFolderViewItem* last_item = items[count - 1];
 			LLFolderViewItem* new_selection = last_item->getNextOpenNode(FALSE);
@@ -1151,12 +1152,12 @@ void LLFolderView::removeSelectedItems( void )
 			for(S32 i = 0; i < count; ++i)
 			{
 				listener = items[i]->getListener();
-				if(listener && (listeners.find(listener) == LLDynamicArray<LLFolderViewEventListener*>::FAIL))
+				if(listener && (std::find(listeners.begin(), listeners.end(), listener) == listeners.end()))
 				{
-					listeners.put(listener);
+					listeners.push_back(listener);
 				}
 			}
-			listener = listeners.get(0);
+			listener = listeners.at(0);
 			if(listener)
 			{
 				listener->removeBatch(listeners);
@@ -1740,7 +1741,7 @@ BOOL LLFolderView::handleUnicodeCharHere(llwchar uni_char)
 
 	if (uni_char > 0x7f)
 	{
-		llwarns << "LLFolderView::handleUnicodeCharHere - Don't handle non-ascii yet, aborting" << llendl;
+		LL_WARNS() << "LLFolderView::handleUnicodeCharHere - Don't handle non-ascii yet, aborting" << LL_ENDL;
 		return FALSE;
 	}
 
@@ -1978,7 +1979,7 @@ BOOL LLFolderView::handleDragAndDrop(S32 x, S32 y, MASK mask, BOOL drop,
 
 	if (handled)
 	{
-		lldebugst(LLERR_USER_INPUT) << "dragAndDrop handled by LLFolderView" << llendl;
+		LL_DEBUGS("UserInput") << "dragAndDrop handled by LLFolderView" << LL_ENDL;
 	}
 
 	return handled;
@@ -2041,7 +2042,7 @@ void LLFolderView::scrollToShowItem(LLFolderViewItem* item, const LLRect& constr
 		LLRect item_scrolled_rect; // item position relative to display area of scroller
 		
 		S32 icon_height = mIcon.isNull() ? 0 : mIcon->getHeight(); 
-		S32 label_height = llmath::llround(getLabelFontForStyle(mLabelStyle)->getLineHeight()); 
+		S32 label_height = ll_round(getLabelFontForStyle(mLabelStyle)->getLineHeight()); 
 		// when navigating with keyboard, only move top of opened folder on screen, otherwise show whole folder
 		S32 max_height_to_show = item->isOpen() && mScrollContainer->hasFocus() ? (llmax( icon_height, label_height ) + ICON_PAD) : local_rect.getHeight(); 
 		
@@ -2304,14 +2305,14 @@ void LLFolderView::idle(void* user_data)
 
 void LLFolderView::dumpSelectionInformation()
 {
-	llinfos << "LLFolderView::dumpSelectionInformation()" << llendl;
-	llinfos << "****************************************" << llendl;
+	LL_INFOS() << "LLFolderView::dumpSelectionInformation()" << LL_ENDL;
+	LL_INFOS() << "****************************************" << LL_ENDL;
 	selected_items_t::iterator item_it;
 	for (item_it = mSelectedItems.begin(); item_it != mSelectedItems.end(); ++item_it)
 	{
-		llinfos << "  " << (*item_it)->getName() << llendl;
+		LL_INFOS() << "  " << (*item_it)->getName() << LL_ENDL;
 	}
-	llinfos << "****************************************" << llendl;
+	LL_INFOS() << "****************************************" << LL_ENDL;
 }
 
 void LLFolderView::updateRenamerPosition()
@@ -2360,6 +2361,14 @@ void LLFolderView::updateMenuOptions(LLMenuGL* menu)
 		LLFolderViewItem* selected_item = (*item_itor);
 		selected_item->buildContextMenu(*menu, flags);
 		flags = 0x0;
+	}
+
+	// This adds a check for restrictions based on the entire
+	// selection set - for example, any one wearable may not push you
+	// over the limit, but all wearables together still might.
+	if (getFolderViewGroupedItemModel())
+	{
+		getFolderViewGroupedItemModel()->groupFilterContextMenu(mSelectedItems, *menu);
 	}
 
 	addNoOptions(menu);

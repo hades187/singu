@@ -38,7 +38,6 @@
 #include <string>
 #include <boost/signals2.hpp>
 
-#include "lldarray.h"
 #include "llwind.h"
 #include "llcloud.h"
 #include "llstat.h"
@@ -75,11 +74,13 @@ class LLDataPacker;
 class LLDataPackerBinaryBuffer;
 class LLHost;
 class LLBBox;
+class LLSpatialGroup;
 // [SL:KB] - Patch: World-MinimapOverlay | Checked: 2012-07-26 (Catznip-3.3)
 class LLViewerTexture;
 // [/SL:KB]
 
 class LLViewerRegionImpl;
+class LLViewerOctreeGroup;
 
 class LLViewerRegion: public LLCapabilityProvider // implements this interface
 {
@@ -99,13 +100,13 @@ public:
 		PARTITION_GRASS,
 		PARTITION_VOLUME,
 		PARTITION_BRIDGE,
+		PARTITION_ATTACHMENT,
 		PARTITION_HUD_PARTICLE,
 		PARTITION_NONE,
 		NUM_PARTITIONS
 	} eObjectPartitions;
 
 	typedef boost::signals2::signal<void(const LLUUID& region_id)> caps_received_signal_t;
-	typedef boost::signals2::signal<void(const LLUUID& region_id)> features_received_signal_t;
 
 	LLViewerRegion(const U64 &handle,
 				   const LLHost &host,
@@ -273,6 +274,8 @@ public:
 	void failedSeedCapability();
 	S32 getNumSeedCapRetries();
 	void setCapability(const std::string& name, const std::string& url);
+	void setCapabilityDebug(const std::string& name, const std::string& url);
+	bool isCapabilityAvailable(const std::string& name) const;
 	// implements LLCapabilityProvider
     virtual std::string getCapability(const std::string& name) const;
 
@@ -283,9 +286,6 @@ public:
 
 	static bool isSpecialCapabilityName(const std::string &name);
 	void logActiveCapabilities() const;
-
-	boost::signals2::connection setFeaturesReceivedCallback(const features_received_signal_t::slot_type& cb);
-	bool getFeaturesReceived() const { return mFeaturesReceived; }
 
     /// Get LLEventPump on which we listen for capability requests
     /// (https://wiki.lindenlab.com/wiki/Viewer:Messaging/Messaging_Notes#Capabilities)
@@ -327,11 +327,18 @@ public:
 	bool meshRezEnabled() const;
 	bool meshUploadEnabled() const;
 
+	// has region received its simulator features list? Requires an additional query after caps received.
+	void setSimulatorFeaturesReceived(bool);
+	bool simulatorFeaturesReceived() const;
+	boost::signals2::connection setSimulatorFeaturesReceivedCallback(const caps_received_signal_t::slot_type& cb);
+
 	void getSimulatorFeatures(LLSD& info);	
 	void setSimulatorFeatures(const LLSD& info);
 
 	
 	bool dynamicPathfindingEnabled() const;
+
+	bool avatarHoverHeightEnabled() const;
 
 	typedef enum
 	{
@@ -374,7 +381,9 @@ public:
 
 	void getNeighboringRegions( std::vector<LLViewerRegion*>& uniqueRegions );
 	void getNeighboringRegionsStatus( std::vector<S32>& regions );
-	
+	const LLViewerRegionImpl * getRegionImpl() const { return mImpl; }
+	LLViewerRegionImpl * getRegionImplNC() { return mImpl; }
+
 	void setGamingData(const LLSD& info);
 	const U32 getGamingFlags() const { return mGamingFlags; }
 	
@@ -418,8 +427,8 @@ public:
 	// messaging system in which the previous message only sends and parses the 
 	// positions stored in the first array so they're maintained separately until 
 	// we stop supporting the old CoarseLocationUpdate message.
-	LLDynamicArray<U32> mMapAvatars;
-	LLDynamicArray<LLUUID> mMapAvatarIDs;
+	std::vector<U32> mMapAvatars;
+	std::vector<LLUUID> mMapAvatarIDs;
 
 private:
 	LLViewerRegionImpl * mImpl;
@@ -471,8 +480,8 @@ private:
 	BOOL									mCacheLoaded;
 	BOOL                                    mCacheDirty;
 
-	LLDynamicArray<U32>						mCacheMissFull;
-	LLDynamicArray<U32>						mCacheMissCRC;
+	std::vector<U32>						mCacheMissFull;
+	std::vector<U32>						mCacheMissCRC;
 
 // [SL:KB] - Patch: World-MinimapOverlay | Checked: 2012-07-26 (Catznip-3.3)
 	mutable tex_matrix_t mWorldMapTiles;
@@ -480,9 +489,9 @@ private:
 
 	bool	mAlive;					// can become false if circuit disconnects
 	bool	mCapabilitiesReceived;
-	bool	mFeaturesReceived;
+	bool	mSimulatorFeaturesReceived;
 	caps_received_signal_t mCapabilitiesReceivedSignal;
-	features_received_signal_t mFeaturesReceivedSignal;
+	caps_received_signal_t mSimulatorFeaturesReceivedSignal;
 
 	BOOL mReleaseNotesRequested;
 	

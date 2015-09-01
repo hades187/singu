@@ -53,6 +53,7 @@
 #include "llmutelist.h"
 #include "llspeakers.h"
 #include "llvoavatar.h" // For mIdleTimer reset
+#include "llviewerobjectlist.h"
 #include "llviewerregion.h"
 
 // [RLVa:KB] - Checked: 2013-05-10 (RLVa-1.4.9)
@@ -97,12 +98,20 @@ LLColor4 agent_chat_color(const LLUUID& id, const std::string& name, bool local_
 	static const LLCachedControl<bool> color_eo_chat("ColorEstateOwnerChat");
 	if (color_eo_chat)
 	{
-		const LLViewerRegion* parent_estate = gAgent.getRegion();
-		if (parent_estate && id == parent_estate->getOwner())
-			return gSavedSettings.getColor4("AscentEstateOwnerColor");
+		const LLViewerObject* obj = gObjectList.findObject(id); // Nearby?
+		if (const LLViewerRegion* parent_estate = obj ? obj->getRegion() : gAgent.getRegion())
+			if (id == parent_estate->getOwner())
+				return gSavedSettings.getColor4("AscentEstateOwnerColor");
 	}
 
 	return local_chat ? gSavedSettings.getColor4("AgentChatColor") : gSavedSettings.getColor("IMChatColor");
+}
+
+bool block_conference(const LLUUID& id)
+{
+	const U32 block(gSavedSettings.getU32("LiruBlockConferences"));
+	if (block == 2) return !LLAvatarActions::isFriend(id);
+	return block;
 }
 
 
@@ -169,8 +178,8 @@ public:
 
 	/*virtual*/ void httpFailure(void)
 	{
-		llwarns << "LLViewerChatterBoxInvitationAcceptResponder error [status:"
-				<< mStatus << "]: " << mReason << llendl;
+		LL_WARNS() << "LLViewerChatterBoxInvitationAcceptResponder error [status:"
+				<< mStatus << "]: " << mReason << LL_ENDL;
 		//throw something back to the viewer here?
 		if ( gIMMgr )
 		{
@@ -438,8 +447,8 @@ void LLIMMgr::addMessage(
 		floater = findFloaterBySession(other_participant_id);
 		if (floater)
 		{
-			llinfos << "found the IM session " << new_session_id
-				<< " by participant " << other_participant_id << llendl;
+			LL_INFOS() << "found the IM session " << new_session_id
+				<< " by participant " << other_participant_id << LL_ENDL;
 		}
 	}
 
@@ -449,7 +458,7 @@ void LLIMMgr::addMessage(
 	if(!floater)
 	{
                // Return now if we're blocking this group's chat or conferences
-               if (gAgent.isInGroup(session_id) ? getIgnoreGroup(session_id) : dialog != IM_NOTHING_SPECIAL && dialog != IM_SESSION_P2P_INVITE && gSavedSettings.getBOOL("LiruBlockConferences"))
+               if (gAgent.isInGroup(session_id) ? getIgnoreGroup(session_id) : dialog != IM_NOTHING_SPECIAL && dialog != IM_SESSION_P2P_INVITE && block_conference(other_participant_id))
 			return;
 
 		std::string name = (session_name.size() > 1) ? session_name : from;
@@ -606,8 +615,8 @@ LLUUID LLIMMgr::addSession(
 	LLFloaterIMPanel* floater = findFloaterBySession(session_id);
 	if(!floater)
 	{
-		LLDynamicArray<LLUUID> ids;
-		ids.put(other_participant_id);
+		std::vector<LLUUID> ids;
+		ids.push_back(other_participant_id);
 
 		floater = createFloater(session_id, other_participant_id, name, dialog, ids, true);
 
@@ -650,9 +659,9 @@ LLUUID LLIMMgr::addSession(
 	const std::string& name,
 	EInstantMessage dialog,
 	const LLUUID& other_participant_id,
-	const LLDynamicArray<LLUUID>& ids)
+	const std::vector<LLUUID>& ids)
 {
-	if (0 == ids.getLength())
+	if (0 == ids.size())
 	{
 		return LLUUID::null;
 	}
@@ -1041,16 +1050,16 @@ LLFloaterIMPanel* LLIMMgr::createFloater(
 	const LLUUID& other_participant_id,
 	const std::string& session_label,
 	const EInstantMessage& dialog,
-	const LLDynamicArray<LLUUID>& ids,
+	const std::vector<LLUUID>& ids,
 	bool user_initiated)
 {
 	if (session_id.isNull())
 	{
-		llwarns << "Creating LLFloaterIMPanel with null session ID" << llendl;
+		LL_WARNS() << "Creating LLFloaterIMPanel with null session ID" << LL_ENDL;
 	}
 
-	llinfos << "LLIMMgr::createFloater: from " << other_participant_id 
-			<< " in session " << session_id << llendl;
+	LL_INFOS() << "LLIMMgr::createFloater: from " << other_participant_id 
+			<< " in session " << session_id << LL_ENDL;
 	LLFloaterIMPanel* floater = new LLFloaterIMPanel(session_label, session_id, other_participant_id, dialog, ids);
 	LLTabContainer::eInsertionPoint i_pt = user_initiated ? LLTabContainer::RIGHT_OF_CURRENT : LLTabContainer::END;
 	LLFloaterChatterBox::getInstance(LLSD())->addFloater(floater, FALSE, i_pt);
@@ -1077,11 +1086,21 @@ LLFloaterIMPanel* LLIMMgr::createFloater(
 	return floater;
 }
 
+void LLIMMgr::addNotifiedNonFriendSessionID(const LLUUID& session_id)
+{
+	mNotifiedNonFriendSessions.insert(session_id);
+}
+
+bool LLIMMgr::isNonFriendSessionNotified(const LLUUID& session_id)
+{
+	return mNotifiedNonFriendSessions.end() != mNotifiedNonFriendSessions.find(session_id);
+}
+
 void LLIMMgr::noteOfflineUsers(
 	LLFloaterIMPanel* floater,
-	const LLDynamicArray<LLUUID>& ids)
+	const std::vector<LLUUID>& ids)
 {
-	S32 count = ids.count();
+	S32 count = ids.size();
 	if(count == 0)
 	{
 		const std::string& only_user = LLTrans::getString("only_user_message");
@@ -1093,11 +1112,11 @@ void LLIMMgr::noteOfflineUsers(
 		LLAvatarTracker& at = LLAvatarTracker::instance();
 		for(S32 i = 0; i < count; ++i)
 		{
-			info = at.getBuddyInfo(ids.get(i));
+			info = at.getBuddyInfo(ids.at(i));
 			std::string full_name;
 			if (info
 				&& !info->isOnline()
-				&& LLAvatarNameCache::getNSName(ids.get(i), full_name))
+				&& LLAvatarNameCache::getNSName(ids.at(i), full_name))
 			{
 				LLUIString offline = LLTrans::getString("offline_message");
 				offline.setArg("[NAME]", full_name);
@@ -1108,7 +1127,7 @@ void LLIMMgr::noteOfflineUsers(
 }
 
 void LLIMMgr::noteMutedUsers(LLFloaterIMPanel* floater,
-								  const LLDynamicArray<LLUUID>& ids)
+								  const std::vector<LLUUID>& ids)
 {
 	// Don't do this if we don't have a mute list.
 	LLMuteList *ml = LLMuteList::getInstance();
@@ -1117,12 +1136,12 @@ void LLIMMgr::noteMutedUsers(LLFloaterIMPanel* floater,
 		return;
 	}
 
-	S32 count = ids.count();
+	S32 count = ids.size();
 	if(count > 0)
 	{
 		for(S32 i = 0; i < count; ++i)
 		{
-			if( ml->isMuted(ids.get(i)) )
+			if( ml->isMuted(ids.at(i)) )
 			{
 				LLUIString muted = LLTrans::getString("muted_message");
 
@@ -1173,7 +1192,7 @@ void LLIMMgr::loadIgnoreGroup()
 	file.open(filename);
 	if (file.is_open())
 	{
-		// llinfos << "loading group chat ignore from " << filename << "..." << llendl;
+		// LL_INFOS() << "loading group chat ignore from " << filename << "..." << LL_ENDL;
 		LLSDSerialize::fromXML(settings_llsd, file);
 
 		mIgnoreGroupList.clear();
@@ -1181,21 +1200,21 @@ void LLIMMgr::loadIgnoreGroup()
 		for(LLSD::array_const_iterator iter = settings_llsd.beginArray();
 		    iter != settings_llsd.endArray(); ++iter)
 		{
-			// llinfos << "added " << iter->asUUID()
-			//         << " to group chat ignore list" << llendl;
+			// LL_INFOS() << "added " << iter->asUUID()
+			//         << " to group chat ignore list" << LL_ENDL;
 			mIgnoreGroupList.push_back( iter->asUUID() );
 		}
 	}
 	else
 	{
-		// llinfos << "can't load " << filename
-		//         << " (probably it doesn't exist yet)" << llendl;
+		// LL_INFOS() << "can't load " << filename
+		//         << " (probably it doesn't exist yet)" << LL_ENDL;
 	}
 }
 
 void LLIMMgr::saveIgnoreGroup()
 {
-	// llinfos << "saving ignore_groups.xml" << llendl;
+	// LL_INFOS() << "saving ignore_groups.xml" << LL_ENDL;
 
 	std::string user_dir = gDirUtilp->getLindenUserDir(true);
 	if (!user_dir.empty())
@@ -1223,20 +1242,20 @@ void LLIMMgr::updateIgnoreGroup(const LLUUID& group_id, bool ignore)
 	if (getIgnoreGroup(group_id) == ignore)
 	{
 		// nothing to do
-		// llinfos << "no change to group " << group_id << ", it is already "
-		//         << (ignore ? "" : "not ") << "ignored" << llendl;
+		// LL_INFOS() << "no change to group " << group_id << ", it is already "
+		//         << (ignore ? "" : "not ") << "ignored" << LL_ENDL;
 		return;
 	}
 	else if (!ignore)
 	{
 		// change from ignored to not ignored
-		// llinfos << "unignoring group " << group_id << llendl;
+		// LL_INFOS() << "unignoring group " << group_id << LL_ENDL;
 		mIgnoreGroupList.remove(group_id);
 	}
 	else //if (ignore)
 	{
 		// change from not ignored to ignored
-		// llinfos << "ignoring group " << group_id << llendl;
+		// LL_INFOS() << "ignoring group " << group_id << LL_ENDL;
 		mIgnoreGroupList.push_back(group_id);
 	}
 }
@@ -1251,11 +1270,11 @@ bool LLIMMgr::getIgnoreGroup(const LLUUID& group_id) const
 
 		if (found != mIgnoreGroupList.end())
 		{
-			// llinfos << "group " << group_id << " is ignored." << llendl;
+			// LL_INFOS() << "group " << group_id << " is ignored." << LL_ENDL;
 			return true;
 		}
 	}
-	// llinfos << "group " << group_id << " is not ignored." << llendl;
+	// LL_INFOS() << "group " << group_id << " is not ignored." << LL_ENDL;
 	return false;
 }
 
@@ -1476,7 +1495,7 @@ public:
 			time_t timestamp =
 				(time_t) message_params["timestamp"].asInteger();
 
-			BOOL is_busy = gAgent.getBusy();
+			bool is_do_not_disturb = gAgent.isDoNotDisturb();
 			BOOL is_muted = LLMuteList::getInstance()->isMuted(
 				from_id,
 				name,
@@ -1499,7 +1518,7 @@ public:
 			chat.mFromID = from_id;
 			chat.mFromName = name;
 
-			if (!is_linden && (is_busy || is_muted))
+			if (!is_linden && (is_do_not_disturb || is_muted))
 			{
 				return;
 			}
@@ -1566,7 +1585,7 @@ public:
 			}
 			else
 			{
-				if (from_id != session_id && gSavedSettings.getBOOL("LiruBlockConferences")) // from and session are equal for IMs only.
+				if (from_id != session_id && block_conference(from_id)) // from and session are equal for IMs only.
 				{
 					leave_group_chat(from_id, session_id);
 					return;

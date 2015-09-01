@@ -315,10 +315,10 @@ void LLFloaterProperties::refreshFromItem(LLInventoryItem* item)
 		&& is_obj_modify && is_complete;
 
 	getChildView("LabelItemNameTitle")->setEnabled(TRUE);
-	getChildView("LabelItemName")->setEnabled(is_modifiable && !is_calling_card); // for now, don't allow rename of calling cards
+	getChildView("LabelItemName")->setEnabled(is_complete && !is_calling_card); // for now, don't allow rename of calling cards
 	getChild<LLUICtrl>("LabelItemName")->setValue(item->getName());
 	getChildView("LabelItemDescTitle")->setEnabled(TRUE);
-	getChildView("LabelItemDesc")->setEnabled(is_modifiable);
+	getChildView("LabelItemDesc")->setEnabled(is_complete);
 	getChildView("IconLocked")->setVisible(!is_modifiable);
 	getChild<LLUICtrl>("LabelItemDesc")->setValue(item->getDescription());
 
@@ -644,7 +644,7 @@ void LLFloaterProperties::onClickLastOwner()
 // static
 void LLFloaterProperties::onCommitName()
 {
-	//llinfos << "LLFloaterProperties::onCommitName()" << llendl;
+	//LL_INFOS() << "LLFloaterProperties::onCommitName()" << LL_ENDL;
 	LLViewerInventoryItem* item = (LLViewerInventoryItem*)findItem();
 	if(!item)
 	{
@@ -680,7 +680,7 @@ void LLFloaterProperties::onCommitName()
 
 void LLFloaterProperties::onCommitDescription()
 {
-	//llinfos << "LLFloaterProperties::onCommitDescription()" << llendl;
+	//LL_INFOS() << "LLFloaterProperties::onCommitDescription()" << LL_ENDL;
 	LLViewerInventoryItem* item = (LLViewerInventoryItem*)findItem();
 	if(!item) return;
 
@@ -717,7 +717,7 @@ void LLFloaterProperties::onCommitDescription()
 
 void LLFloaterProperties::onCommitPermissions()
 {
-	//llinfos << "LLFloaterProperties::onCommitPermissions()" << llendl;
+	//LL_INFOS() << "LLFloaterProperties::onCommitPermissions()" << LL_ENDL;
 	LLViewerInventoryItem* item = (LLViewerInventoryItem*)findItem();
 	if(!item) return;
 	LLPermissions perm(item->getPermissions());
@@ -836,14 +836,14 @@ void LLFloaterProperties::onCommitPermissions()
 // static
 void LLFloaterProperties::onCommitSaleInfo()
 {
-	//llinfos << "LLFloaterProperties::onCommitSaleInfo()" << llendl;
+	//LL_INFOS() << "LLFloaterProperties::onCommitSaleInfo()" << LL_ENDL;
 	updateSaleInfo();
 }
 
 // static
 void LLFloaterProperties::onCommitSaleType()
 {
-	//llinfos << "LLFloaterProperties::onCommitSaleType()" << llendl;
+	//LL_INFOS() << "LLFloaterProperties::onCommitSaleType()" << LL_ENDL;
 	updateSaleInfo();
 }
 

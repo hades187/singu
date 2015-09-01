@@ -33,7 +33,7 @@
 #include "llviewerinventory.h"
 #include "llviewerregion.h"
 #include "message.h"
-// [RLVa:KB] - Checked: 2010-09-13 (RLVa-1.2.1c)
+// [RLVa:KB] - Checked: 2011-05-22 (RLVa-1.3.1a)
 #include "rlvhandler.h"
 #include "rlvlocks.h"
 // [/RLVa:KB]
@@ -49,7 +49,7 @@ LLAttachmentsMgr::~LLAttachmentsMgr()
 void LLAttachmentsMgr::addAttachment(const LLUUID& item_id,
 									 const U8 attachment_pt,
 //									 const BOOL add)
-// [RLVa:KB] - Checked: 2010-09-13 (RLVa-1.2.1c) | Added: RLVa-1.2.1c
+// [RLVa:KB] - Checked: 2010-09-13 (RLVa-1.2.1)
 									 const BOOL add, const BOOL fRlvForce /*=FALSE*/)
 // [/RLVa:KB]
 {
@@ -58,7 +58,7 @@ void LLAttachmentsMgr::addAttachment(const LLUUID& item_id,
 	attachment.mAttachmentPt = attachment_pt;
 	attachment.mAdd = add;
 
-// [RLVa:KB] - Checked: 2010-09-23 (RLVa-1.2.1d) | Modified: RLVa-1.2.1d
+// [RLVa:KB] - Checked: 2010-09-23 (RLVa-1.2.1)
 	if ( (rlv_handler_t::isEnabled()) && (!fRlvForce) && (gRlvAttachmentLocks.hasLockedAttachmentPoint(RLV_LOCK_ANY)) )
 	{
 		const LLInventoryItem* pItem = gInventory.getItem(item_id); 
@@ -133,7 +133,7 @@ void LLAttachmentsMgr::onIdle()
 		LLViewerInventoryItem* item = gInventory.getItem(attachment.mItemID);
 		if (!item)
 		{
-			llinfos << "Attempted to add non-existant item ID:" << attachment.mItemID << llendl;
+			LL_INFOS() << "Attempted to add non-existant item ID:" << attachment.mItemID << LL_ENDL;
 			continue;
 		}
 		S32 attachment_pt = attachment.mAttachmentPt;

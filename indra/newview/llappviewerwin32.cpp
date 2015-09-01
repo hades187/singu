@@ -38,9 +38,10 @@
 # endif
 #endif
 
+#include "llwindowwin32.h" // *FIX: for setting gIconResource.
+
 #include "llappviewerwin32.h"
 
-#include "llwindowwin32.h" // *FIX: for setting gIconResource.
 #include "llgl.h"
 #include "res/resource.h" // *FIX: for setting gIconResource.
 
@@ -49,6 +50,7 @@
 #include <errorrep.h>	// for AddERExcludedApplicationA()
 #include <process.h>	// _spawnl()
 #include <tchar.h>		// For TCHAR support
+#include <Werapi.h>
 
 #include "llviewercontrol.h"
 #include "lldxhardware.h"
@@ -77,7 +79,7 @@
 extern "C" {
     void _wassert(const wchar_t * _Message, const wchar_t *_File, unsigned _Line)
     {
-        llerrs << _Message << llendl;
+        LL_ERRS() << _Message << LL_ENDL;
     }
 }
 #endif
@@ -93,7 +95,7 @@ void nvapi_error(NvAPI_Status status)
 {
     NvAPI_ShortString szDesc = {0};
 	NvAPI_GetErrorMessage(status, szDesc);
-	llwarns << szDesc << llendl;
+	LL_WARNS() << szDesc << LL_ENDL;
 
 	//should always trigger when asserts are enabled
 	//llassert(status == NVAPI_OK);
@@ -245,7 +247,7 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 	bool ok = viewer_app_ptr->init();
 	if(!ok)
 	{
-		llwarns << "Application init failed." << llendl;
+		LL_WARNS() << "Application init failed." << LL_ENDL;
 		return -1;
 	}
 	
@@ -273,12 +275,12 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 	// Have to wait until after logging is initialized to display LFH info
 	if (num_heaps > 0)
 	{
-		llinfos << "Attempted to enable LFH for " << num_heaps << " heaps." << llendl;
+		LL_INFOS() << "Attempted to enable LFH for " << num_heaps << " heaps." << LL_ENDL;
 		for(S32 i = 0; i < num_heaps; i++)
 		{
 			if (heap_enable_lfh_error[i])
 			{
-				llinfos << "  Failed to enable LFH for heap: " << i << " Error: " << heap_enable_lfh_error[i] << llendl;
+				LL_INFOS() << "  Failed to enable LFH for heap: " << i << " Error: " << heap_enable_lfh_error[i] << LL_ENDL;
 			}
 		}
 	}
@@ -297,14 +299,14 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 		// app cleanup if there was a problem.
 		//
 #if WINDOWS_CRT_MEM_CHECKS
-    llinfos << "CRT Checking memory:" << llendflush;
+    LL_INFOS() << "CRT Checking memory:" << LL_ENDL;
 	if (!_CrtCheckMemory())
 	{
-		llwarns << "_CrtCheckMemory() failed at prior to cleanup!" << llendflush;
+		LL_WARNS() << "_CrtCheckMemory() failed at prior to cleanup!" << LL_ENDL;
 	}
 	else
 	{
-		llinfos << " No corruption detected." << llendflush;
+		LL_INFOS() << " No corruption detected." << LL_ENDL;
 	}
 #endif
 	
@@ -313,14 +315,14 @@ int APIENTRY WINMAIN(HINSTANCE hInstance,
 	viewer_app_ptr->cleanup();
 	
 #if WINDOWS_CRT_MEM_CHECKS
-    llinfos << "CRT Checking memory:" << llendflush;
+    LL_INFOS() << "CRT Checking memory:" << LL_ENDL;
 	if (!_CrtCheckMemory())
 	{
-		llwarns << "_CrtCheckMemory() failed after cleanup!" << llendflush;
+		LL_WARNS() << "_CrtCheckMemory() failed after cleanup!" << LL_ENDL;
 	}
 	else
 	{
-		llinfos << " No corruption detected." << llendflush;
+		LL_INFOS() << " No corruption detected." << LL_ENDL;
 	}
 #endif
 	 
@@ -391,11 +393,11 @@ void LLAppViewerWin32::disableWinErrorReporting()
 				if( 0 == pAddERExcludedApplicationA( executable_name ) )
 				{
 					U32 error_code = GetLastError();
-					llinfos << "AddERExcludedApplication() failed with error code " << error_code << llendl;
+					LL_INFOS() << "AddERExcludedApplication() failed with error code " << error_code << LL_ENDL;
 				}
 				else
 				{
-					llinfos << "AddERExcludedApplication() success for " << executable_name << llendl;
+					LL_INFOS() << "AddERExcludedApplication() success for " << executable_name << LL_ENDL;
 				}
 			}
 			FreeLibrary( fault_rep_dll_handle );
@@ -426,7 +428,7 @@ void create_console()
 	h_con_handle = _open_osfhandle(l_std_handle, _O_TEXT);
 	if (h_con_handle == -1)
 	{
-		llwarns << "create_console() failed to open stdout handle" << llendl;
+		LL_WARNS() << "create_console() failed to open stdout handle" << LL_ENDL;
 	}
 	else
 	{
@@ -440,7 +442,7 @@ void create_console()
 	h_con_handle = _open_osfhandle(l_std_handle, _O_TEXT);
 	if (h_con_handle == -1)
 	{
-		llwarns << "create_console() failed to open stdin handle" << llendl;
+		LL_WARNS() << "create_console() failed to open stdin handle" << LL_ENDL;
 	}
 	else
 	{
@@ -454,7 +456,7 @@ void create_console()
 	h_con_handle = _open_osfhandle(l_std_handle, _O_TEXT);
 	if (h_con_handle == -1)
 	{
-		llwarns << "create_console() failed to open stderr handle" << llendl;
+		LL_WARNS() << "create_console() failed to open stderr handle" << LL_ENDL;
 	}
 	else
 	{
@@ -483,7 +485,7 @@ bool LLAppViewerWin32::init()
 	// (Don't send our data to Microsoft--at least until we are Logo approved and have a way
 	// of getting the data back from them.)
 	//
-	// llinfos << "Turning off Windows error reporting." << llendl;
+	// LL_INFOS() << "Turning off Windows error reporting." << LL_ENDL;
 	disableWinErrorReporting();
 
 #ifndef LL_RELEASE_FOR_DOWNLOAD
@@ -658,7 +660,7 @@ bool LLAppViewerWin32::sendURLToOtherInstance(const std::string& url)
 
 	if (other_window != NULL)
 	{
-		lldebugs << "Found other window with the name '" << getWindowTitle() << "'" << llendl;
+		LL_DEBUGS() << "Found other window with the name '" << getWindowTitle() << "'" << LL_ENDL;
 		COPYDATASTRUCT cds;
 		const S32 SLURL_MESSAGE_TYPE = 0;
 		cds.dwData = SLURL_MESSAGE_TYPE;
@@ -666,8 +668,8 @@ bool LLAppViewerWin32::sendURLToOtherInstance(const std::string& url)
 		cds.lpData = (void*)url.c_str();
 
 		LRESULT msg_result = SendMessage(other_window, WM_COPYDATA, NULL, (LPARAM)&cds);
-		lldebugs << "SendMessage(WM_COPYDATA) to other window '" 
-				 << getWindowTitle() << "' returned " << msg_result << llendl;
+		LL_DEBUGS() << "SendMessage(WM_COPYDATA) to other window '" 
+				 << getWindowTitle() << "' returned " << msg_result << LL_ENDL;
 		return true;
 	}
 	return false;
@@ -699,7 +701,7 @@ std::string LLAppViewerWin32::generateSerialNumber()
 	}
 	else
 	{
-		llwarns << "GetVolumeInformation failed" << llendl;
+		LL_WARNS() << "GetVolumeInformation failed" << LL_ENDL;
 	}
 	return serial_md5;
 }

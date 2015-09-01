@@ -389,9 +389,11 @@ BOOL LLToolBrushLand::handleMouseDown(S32 x, S32 y, MASK mask)
 			return TRUE;
 		}
 
-		if (!canTerraformParcel(regionp))
+		static bool alerted(false); // Don't spam this
+		if (!alerted && !canTerraformParcel(regionp))
 		{
 			alertNoTerraformParcel();
+			alerted = true;
 		}
 
 		LLVector3 pos_region = region_position.getPositionRegion();
@@ -690,7 +692,7 @@ bool LLToolBrushLand::canTerraformParcel(LLViewerRegion* regionp) const
 	if (selected_parcel)
 	{
 		BOOL owner_release = LLViewerParcelMgr::isParcelOwnedByAgent(selected_parcel, GP_LAND_ALLOW_EDIT_LAND);
-		is_terraform_allowed = ( gAgent.canManageEstate() || (selected_parcel->getOwnerID() == regionp->getOwner()) || owner_release);
+		is_terraform_allowed = (selected_parcel->getAllowTerraform() || gAgent.canManageEstate() || (selected_parcel->getOwnerID() == regionp->getOwner()) || owner_release);
 	}
 
 	return is_terraform_allowed;

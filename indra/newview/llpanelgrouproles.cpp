@@ -51,7 +51,6 @@
 #include "lltabcontainer.h"
 #include "lltextbox.h"
 #include "lltexteditor.h"
-#include "lltrans.h"
 #include "llviewertexturelist.h"
 #include "llviewerwindow.h"
 #include "llfocusmgr.h"
@@ -73,7 +72,7 @@ bool agentCanAddToRole(const LLUUID& group_id,
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(group_id);
 	if (!gdatap) 
 	{
-		llwarns << "agentCanAddToRole "
+		LL_WARNS() << "agentCanAddToRole "
 				<< "-- No group data!" << LL_ENDL;
 		return false;
 	}
@@ -141,7 +140,7 @@ LLPanelGroupRoles::~LLPanelGroupRoles()
 
 BOOL LLPanelGroupRoles::postBuild()
 {
-	lldebugs << "LLPanelGroupRoles::postBuild()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRoles::postBuild()" << LL_ENDL;
 
 	mSubTabContainer = getChild<LLTabContainer>("roles_tab_container");
 
@@ -154,7 +153,7 @@ BOOL LLPanelGroupRoles::postBuild()
 		LLPanelGroupSubTab* subtabp = dynamic_cast<LLPanelGroupSubTab*>(panel);
 		if (!subtabp)
 		{
-			llwarns << "Invalid subtab panel: " << panel->getName() << llendl;
+			LL_WARNS() << "Invalid subtab panel: " << panel->getName() << LL_ENDL;
 			return FALSE;
 		}
 
@@ -369,7 +368,7 @@ void LLPanelGroupRoles::update(LLGroupChange gc)
 	}
 	else
 	{
-		llwarns << "LLPanelGroupRoles::update() -- No subtab to update!" << llendl;
+		LL_WARNS() << "LLPanelGroupRoles::update() -- No subtab to update!" << LL_ENDL;
 	}
 }
 
@@ -587,7 +586,7 @@ void LLPanelGroupSubTab::buildActionsList(LLScrollListCtrl* ctrl,
 {
 	if (LLGroupMgr::getInstance()->mRoleActionSets.empty())
 	{
-		llwarns << "Can't build action list - no actions found." << llendl;
+		LL_WARNS() << "Can't build action list - no actions found." << LL_ENDL;
 		return;
 	}
 
@@ -617,7 +616,7 @@ void LLPanelGroupSubTab::buildActionCategory(LLScrollListCtrl* ctrl,
 											 BOOL filter,
 											 BOOL is_owner_role)
 {
-	lldebugs << "Building role list for: " << action_set->mActionSetData->mName << llendl;
+	LL_DEBUGS() << "Building role list for: " << action_set->mActionSetData->mName << LL_ENDL;
 	// See if the allow mask matches anything in this category.
 	if (show_all || (allowed_by_some & action_set->mActionSetData->mPowerBit))
 	{
@@ -909,7 +908,7 @@ void LLPanelGroupMembersSubTab::onMemberSelect(LLUICtrl* ctrl, void* user_data)
 
 void LLPanelGroupMembersSubTab::handleMemberSelect()
 {
-	lldebugs << "LLPanelGroupMembersSubTab::handleMemberSelect" << llendl;
+	LL_DEBUGS() << "LLPanelGroupMembersSubTab::handleMemberSelect" << LL_ENDL;
 
 	mAssignedRolesList->deleteAllItems();
 	mAllowedActionsList->deleteAllItems();
@@ -917,8 +916,8 @@ void LLPanelGroupMembersSubTab::handleMemberSelect()
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupMembersSubTab::handleMemberSelect() "
-				<< "-- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::handleMemberSelect() "
+				<< "-- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -1091,7 +1090,7 @@ void LLPanelGroupMembersSubTab::handleMemberSelect()
 		else
 		{
 			// This could happen if changes are not synced right on sub-panel change.
-			llwarns << "No group role data for " << iter->second << llendl;
+			LL_WARNS() << "No group role data for " << iter->second << LL_ENDL;
 		}
 	}
 	mAssignedRolesList->setEnabled(TRUE);
@@ -1383,7 +1382,7 @@ bool LLPanelGroupMembersSubTab::apply(std::string& mesg)
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap)
 	{
-		llwarns << "Unable to get group data for group " << mGroupID << llendl;
+		LL_WARNS() << "Unable to get group data for group " << mGroupID << LL_ENDL;
 
 		mesg.assign("Unable to save member data.  Try again later.");
 		return false;
@@ -1409,7 +1408,7 @@ bool LLPanelGroupMembersSubTab::apply(std::string& mesg)
 			}
 			else
 			{
-				llwarns << "Unable to get role information for the owner role in group " << mGroupID << llendl;
+				LL_WARNS() << "Unable to get role information for the owner role in group " << mGroupID << LL_ENDL;
 
 				mesg.assign("Unable to retried specific group information.  Try again later");
 				return false;
@@ -1445,7 +1444,7 @@ void LLPanelGroupMembersSubTab::applyMemberChanges()
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap)
 	{
-		llwarns << "Unable to get group data for group " << mGroupID << llendl;
+		LL_WARNS() << "Unable to get group data for group " << mGroupID << LL_ENDL;
 		return;
 	}
 
@@ -1509,21 +1508,21 @@ U64 LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges(const LLUUID& ag
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- No group data!" << LL_ENDL;
 		return GP_NO_POWERS;
 	}
 
 	LLGroupMgrGroupData::member_list_t::iterator iter = gdatap->mMembers.find(agent_id);
 	if ( iter == gdatap->mMembers.end() )
 	{
-		llwarns << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- No member data for member with UUID " << agent_id << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- No member data for member with UUID " << agent_id << LL_ENDL;
 		return GP_NO_POWERS;
 	}
 
 	LLGroupMemberData* member_data = (*iter).second;
 	if (!member_data)
 	{
-		llwarns << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- Null member data for member with UUID " << agent_id << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::getAgentPowersBasedOnRoleChanges() -- Null member data for member with UUID " << agent_id << LL_ENDL;
 		return GP_NO_POWERS;
 	}
 
@@ -1629,7 +1628,7 @@ void LLPanelGroupMembersSubTab::update(LLGroupChange gc)
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupMembersSubTab::update() -- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::update() -- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -1670,10 +1669,9 @@ void LLPanelGroupMembersSubTab::update(LLGroupChange gc)
 
 bool is_online_status_string(const std::string& status)
 {
-	static const std::string online(LLTrans::getString("group_member_status_online"));
-	if (status == online) return true;
-	static const std::string unknown(LLTrans::getString("group_member_status_unknown"));
-	return status == unknown;
+	const std::string& localized_online();
+	const std::string& localized_unknown();
+	return status == localized_online() || status == localized_unknown();
 }
 
 void LLPanelGroupMembersSubTab::addMemberToList(LLGroupMemberData* data)
@@ -1746,7 +1744,7 @@ void LLPanelGroupMembersSubTab::updateMembers()
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupMembersSubTab::updateMembers() -- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupMembersSubTab::updateMembers() -- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -1904,7 +1902,7 @@ BOOL LLPanelGroupRolesSubTab::postBuildSubTab(LLView* root)
 	if (!mRolesList || !mAssignedMembersList || !mAllowedActionsList
 		|| !mRoleName || !mRoleTitle || !mRoleDescription || !mMemberVisibleCheck)
 	{
-		llwarns << "ARG! element not found." << llendl;
+		LL_WARNS() << "ARG! element not found." << LL_ENDL;
 		return FALSE;
 	}
 
@@ -1966,7 +1964,7 @@ void LLPanelGroupRolesSubTab::activate()
 
 void LLPanelGroupRolesSubTab::deactivate()
 {
-	lldebugs << "LLPanelGroupRolesSubTab::deactivate()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::deactivate()" << LL_ENDL;
 
 	LLPanelGroupSubTab::deactivate();
 	mFirstOpen = FALSE;
@@ -1974,12 +1972,12 @@ void LLPanelGroupRolesSubTab::deactivate()
 
 bool LLPanelGroupRolesSubTab::needsApply(std::string& mesg)
 {
-	lldebugs << "LLPanelGroupRolesSubTab::needsApply()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::needsApply()" << LL_ENDL;
 
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap)
 	{
-		llwarns << "Unable to get group data for group " << mGroupID << llendl;
+		LL_WARNS() << "Unable to get group data for group " << mGroupID << LL_ENDL;
 		return false;
 	}
 
@@ -1990,7 +1988,7 @@ bool LLPanelGroupRolesSubTab::needsApply(std::string& mesg)
 
 bool LLPanelGroupRolesSubTab::apply(std::string& mesg)
 {
-	lldebugs << "LLPanelGroupRolesSubTab::apply()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::apply()" << LL_ENDL;
 
 	saveRoleChanges(true);
 	mFirstOpen = FALSE;
@@ -2053,7 +2051,7 @@ bool LLPanelGroupRolesSubTab::matchesSearchFilter(std::string rolename, std::str
 
 void LLPanelGroupRolesSubTab::update(LLGroupChange gc)
 {
-	lldebugs << "LLPanelGroupRolesSubTab::update()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::update()" << LL_ENDL;
 
 	if (mGroupID.isNull()) return;
 
@@ -2098,7 +2096,7 @@ void LLPanelGroupRolesSubTab::update(LLGroupChange gc)
 			}
 			else
 			{
-				llwarns << "LLPanelGroupRolesSubTab::update() No role data for role " << (*rit).first << llendl;
+				LL_WARNS() << "LLPanelGroupRolesSubTab::update() No role data for role " << (*rit).first << LL_ENDL;
 			}
 		}
 
@@ -2165,7 +2163,7 @@ void LLPanelGroupRolesSubTab::onRoleSelect(LLUICtrl* ctrl, void* user_data)
 void LLPanelGroupRolesSubTab::handleRoleSelect()
 {
 	BOOL can_delete = TRUE;
-	lldebugs << "LLPanelGroupRolesSubTab::handleRoleSelect()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::handleRoleSelect()" << LL_ENDL;
 
 	mAssignedMembersList->deleteAllItems();
 	mAllowedActionsList->deleteAllItems();
@@ -2173,8 +2171,8 @@ void LLPanelGroupRolesSubTab::handleRoleSelect()
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupRolesSubTab::handleRoleSelect() "
-				<< "-- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupRolesSubTab::handleRoleSelect() "
+				<< "-- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -2262,8 +2260,8 @@ void LLPanelGroupRolesSubTab::buildMembersList()
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupRolesSubTab::handleRoleSelect() "
-				<< "-- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupRolesSubTab::handleRoleSelect() "
+				<< "-- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -2312,13 +2310,13 @@ void LLPanelGroupRolesSubTab::handleActionCheck(LLUICtrl* ctrl, bool force)
 	if (!check)
 		return;
 	
-	lldebugs << "LLPanelGroupRolesSubTab::handleActionSelect()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::handleActionSelect()" << LL_ENDL;
 
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupRolesSubTab::handleRoleSelect() "
-				<< "-- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupRolesSubTab::handleRoleSelect() "
+				<< "-- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -2367,8 +2365,8 @@ void LLPanelGroupRolesSubTab::handleActionCheck(LLUICtrl* ctrl, bool force)
 		}
 		else
 		{
-			llwarns << "Unable to look up role information for role id: "
-				<< role_id << llendl;
+			LL_WARNS() << "Unable to look up role information for role id: "
+				<< role_id << LL_ENDL;
 		}
 	}
 
@@ -2407,8 +2405,8 @@ void LLPanelGroupRolesSubTab::handleActionCheck(LLUICtrl* ctrl, bool force)
 		}
 		else
 		{
-			llwarns << "Unable to look up role information for role id: "
-				<< role_id << llendl;
+			LL_WARNS() << "Unable to look up role information for role id: "
+				<< role_id << LL_ENDL;
 		}
 
 		//////////////////////////////////////////////////////////////////////////
@@ -2513,13 +2511,13 @@ void LLPanelGroupRolesSubTab::onMemberVisibilityChange(LLUICtrl* ctrl, void* use
 
 void LLPanelGroupRolesSubTab::handleMemberVisibilityChange(bool value)
 {
-	lldebugs << "LLPanelGroupRolesSubTab::handleMemberVisibilityChange()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupRolesSubTab::handleMemberVisibilityChange()" << LL_ENDL;
 
 	LLGroupMgrGroupData* gdatap = LLGroupMgr::getInstance()->getGroupData(mGroupID);
 	if (!gdatap) 
 	{
-		llwarns << "LLPanelGroupRolesSubTab::handleRoleSelect() "
-				<< "-- No group data!" << llendl;
+		LL_WARNS() << "LLPanelGroupRolesSubTab::handleRoleSelect() "
+				<< "-- No group data!" << LL_ENDL;
 		return;
 	}
 
@@ -2725,27 +2723,27 @@ void LLPanelGroupActionsSubTab::activate()
 
 void LLPanelGroupActionsSubTab::deactivate()
 {
-	lldebugs << "LLPanelGroupActionsSubTab::deactivate()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupActionsSubTab::deactivate()" << LL_ENDL;
 
 	LLPanelGroupSubTab::deactivate();
 }
 
 bool LLPanelGroupActionsSubTab::needsApply(std::string& mesg)
 {
-	lldebugs << "LLPanelGroupActionsSubTab::needsApply()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupActionsSubTab::needsApply()" << LL_ENDL;
 
 	return false;
 }
 
 bool LLPanelGroupActionsSubTab::apply(std::string& mesg)
 {
-	lldebugs << "LLPanelGroupActionsSubTab::apply()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupActionsSubTab::apply()" << LL_ENDL;
 	return true;
 }
 
 void LLPanelGroupActionsSubTab::update(LLGroupChange gc)
 {
-	lldebugs << "LLPanelGroupActionsSubTab::update()" << llendl;
+	LL_DEBUGS() << "LLPanelGroupActionsSubTab::update()" << LL_ENDL;
 
 	if (mGroupID.isNull()) return;
 

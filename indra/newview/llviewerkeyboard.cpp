@@ -45,6 +45,7 @@
 #include "lltoolfocus.h"
 #include "llviewerwindow.h"
 #include "llvoavatarself.h"
+#include "llxuiparser.h"
 
 void handle_reset_view();
 
@@ -58,7 +59,6 @@ const F32 FLY_FRAMES = 4;
 const F32 NUDGE_TIME = 0.25f;  // in seconds
 const S32 NUDGE_FRAMES = 2;
 const F32 ORBIT_NUDGE_RATE = 0.05f;  // fraction of normal speed
-const F32 YAW_NUDGE_RATE = 0.05f;  // fraction of normal speed
 
 struct LLKeyboardActionRegistry 
 :	public LLRegistrySingleton<std::string, boost::function<void (EKeystate keystate)>, LLKeyboardActionRegistry>
@@ -70,13 +70,14 @@ LLViewerKeyboard gViewerKeyboard;
 void agent_jump( EKeystate s )
 {
 	if( KEYSTATE_UP == s  ) return;
+	static LLCachedControl<bool> sAutomaticFly(gSavedSettings, "AutomaticFly");
 	F32 time = gKeyboard->getCurKeyElapsedTime();
-	S32 frame_count = llmath::llround(gKeyboard->getCurKeyElapsedFrameCount());
+	S32 frame_count = ll_round(gKeyboard->getCurKeyElapsedFrameCount());
 
 	if( time < FLY_TIME 
 		|| frame_count <= FLY_FRAMES 
 		|| gAgent.upGrabbed()
-		|| !gSavedSettings.getBOOL("AutomaticFly"))
+		|| !sAutomaticFly())
 	{
 		gAgent.moveUp(1);
 	}
@@ -86,39 +87,51 @@ void agent_jump( EKeystate s )
 		gAgent.moveUp(1);
 	}
 }
+// <singu>
 void agent_toggle_down( EKeystate s )
 {
 	if (KEYSTATE_UP == s) return;
 
-	if (KEYSTATE_DOWN == s && !gAgent.getFlying() && gSavedSettings.getBOOL("SGShiftCrouchToggle"))
+	static LLCachedControl<bool> sCrouchToggle(gSavedSettings, "SGShiftCrouchToggle");
+	if (KEYSTATE_DOWN == s
+		&& !gAgent.getFlying()
+		&& sCrouchToggle())
 	{
 		gAgent.toggleCrouch();
 	}
 	gAgent.moveUp(-1);
 }
+// </singu>
 
 void agent_push_down( EKeystate s )
 {
-	if( KEYSTATE_UP == s  ) return;
+	if( KEYSTATE_UP == s ) return;
 	gAgent.moveUp(-1);
+}
+
+static void agent_check_temporary_run(LLAgent::EDoubleTapRunMode mode)
+{
+//	if (gAgent.mDoubleTapRunMode == mode &&
+//		gAgent.getRunning() &&
+//		!gAgent.getAlwaysRun())
+//	{
+//		// Turn off temporary running.
+//		gAgent.clearRunning();
+//		gAgent.sendWalkRun(gAgent.getRunning());
+//	}
+// [RLVa:KB] - Checked: 2011-05-11 (RLVa-1.3.0i) | Added: RLVa-1.3.0i
+	if ( (gAgent.mDoubleTapRunMode == mode) && (gAgent.getTempRun()) )
+		gAgent.clearTempRun();
+// [/RLVa:KB]
 }
 
 static void agent_handle_doubletap_run(EKeystate s, LLAgent::EDoubleTapRunMode mode)
 {
 	if (KEYSTATE_UP == s)
 	{
-//		if (gAgent.mDoubleTapRunMode == mode &&
-//		    gAgent.getRunning() &&
-//		    !gAgent.getAlwaysRun())
-//		{
-//			// Turn off temporary running.
-//			gAgent.clearRunning();
-//			gAgent.sendWalkRun(gAgent.getRunning());
-//		}
-// [RLVa:KB] - Checked: 2011-05-11 (RLVa-1.3.0i) | Added: RLVa-1.3.0i
-		if ( (gAgent.mDoubleTapRunMode == mode) && (gAgent.getTempRun()) )
-			gAgent.clearTempRun();
-// [/RLVa:KB]
+		// Note: in case shift is already released, slide left/right run
+		// will be released in agent_turn_left()/agent_turn_right()
+		agent_check_temporary_run(mode);
 	}
 	else if (gSavedSettings.getBOOL("AllowTapTapHoldRun") &&
 		 KEYSTATE_DOWN == s &&
@@ -148,7 +161,7 @@ static void agent_push_forwardbackward( EKeystate s, S32 direction, LLAgent::EDo
 	if (KEYSTATE_UP == s) return;
 
 	F32 time = gKeyboard->getCurKeyElapsedTime();
-	S32 frame_count = llmath::llround(gKeyboard->getCurKeyElapsedFrameCount());
+	S32 frame_count = ll_round(gKeyboard->getCurKeyElapsedFrameCount());
 
 	if( time < NUDGE_TIME || frame_count <= NUDGE_FRAMES)
 	{
@@ -176,7 +189,7 @@ static void agent_slide_leftright( EKeystate s, S32 direction, LLAgent::EDoubleT
 	agent_handle_doubletap_run(s, mode);
 	if( KEYSTATE_UP == s ) return;
 	F32 time = gKeyboard->getCurKeyElapsedTime();
-	S32 frame_count = llmath::llround(gKeyboard->getCurKeyElapsedFrameCount());
+	S32 frame_count = ll_round(gKeyboard->getCurKeyElapsedFrameCount());
 
 	if( time < NUDGE_TIME || frame_count <= NUDGE_FRAMES)
 	{
@@ -208,7 +221,10 @@ void agent_turn_left( EKeystate s )
 	}
 	else
 	{
-		if (KEYSTATE_UP == s) return;
+		if (KEYSTATE_UP == s)
+		{
+			return;
+		}
 		F32 time = gKeyboard->getCurKeyElapsedTime();
 		gAgent.moveYaw( LLFloaterMove::getYawRate( time ) );
 	}
@@ -223,7 +239,10 @@ void agent_turn_right( EKeystate s )
 	}
 	else
 	{
-		if (KEYSTATE_UP == s) return;
+		if (KEYSTATE_UP == s)
+		{
+			return;
+		}
 		F32 time = gKeyboard->getCurKeyElapsedTime();
 		gAgent.moveYaw( -LLFloaterMove::getYawRate( time ) );
 	}
@@ -725,7 +744,7 @@ BOOL LLViewerKeyboard::bindKey(const S32 mode, const KEY key, const MASK mask, c
 
 	if (!function)
 	{
-		llerrs << "Can't bind key to function " << function_name << ", no function with this name found" << llendl;
+		LL_ERRS() << "Can't bind key to function " << function_name << ", no function with this name found" << LL_ENDL;
 		return FALSE;
 	}
 
@@ -738,13 +757,13 @@ BOOL LLViewerKeyboard::bindKey(const S32 mode, const KEY key, const MASK mask, c
 
 	if (index >= MAX_KEY_BINDINGS)
 	{
-		llerrs << "LLKeyboard::bindKey() - too many keys for mode " << mode << llendl;
+		LL_ERRS() << "LLKeyboard::bindKey() - too many keys for mode " << mode << LL_ENDL;
 		return FALSE;
 	}
 
 	if (mode >= MODE_COUNT)
 	{
-		llerrs << "LLKeyboard::bindKey() - unknown mode passed" << mode << llendl;
+		LL_ERRS() << "LLKeyboard::bindKey() - unknown mode passed" << mode << LL_ENDL;
 		return FALSE;
 	}
 
@@ -758,6 +777,61 @@ BOOL LLViewerKeyboard::bindKey(const S32 mode, const KEY key, const MASK mask, c
 	return TRUE;
 }
 
+LLViewerKeyboard::KeyBinding::KeyBinding()
+:	key("key"),
+	mask("mask"),
+	command("command")
+{}
+
+LLViewerKeyboard::KeyMode::KeyMode(EKeyboardMode _mode)
+:	bindings("binding"),
+	mode(_mode)
+{}
+
+LLViewerKeyboard::Keys::Keys()
+:	first_person("first_person", KeyMode(MODE_FIRST_PERSON)),
+	third_person("third_person", KeyMode(MODE_THIRD_PERSON)),
+	edit("edit", KeyMode(MODE_EDIT)),
+	sitting("sitting", KeyMode(MODE_SITTING)),
+	edit_avatar("edit_avatar", KeyMode(MODE_EDIT_AVATAR))
+{}
+
+S32 LLViewerKeyboard::loadBindingsXML(const std::string& filename)
+{
+	S32 binding_count = 0;
+	Keys keys;
+	LLSimpleXUIParser parser;
+
+	if (parser.readXUI(filename, keys)
+		&& keys.validateBlock())
+	{
+		binding_count += loadBindingMode(keys.first_person);
+		binding_count += loadBindingMode(keys.third_person);
+		binding_count += loadBindingMode(keys.edit);
+		binding_count += loadBindingMode(keys.sitting);
+		binding_count += loadBindingMode(keys.edit_avatar);
+	}
+	return binding_count;
+}
+
+S32 LLViewerKeyboard::loadBindingMode(const LLViewerKeyboard::KeyMode& keymode)
+{
+	S32 binding_count = 0;
+	for (LLInitParam::ParamIterator<KeyBinding>::const_iterator it = keymode.bindings.begin(),
+			end_it = keymode.bindings.end();
+		it != end_it;
+		++it)
+	{
+		KEY key;
+		MASK mask;
+		LLKeyboard::keyFromString(it->key, &key);
+		LLKeyboard::maskFromString(it->mask, &mask);
+		bindKey(keymode.mode, key, mask, it->command);
+		binding_count++;
+	}
+
+	return binding_count;
+}
 
 S32 LLViewerKeyboard::loadBindings(const std::string& filename)
 {
@@ -778,7 +852,7 @@ S32 LLViewerKeyboard::loadBindings(const std::string& filename)
 
 	if(filename.empty())
 	{
-		llerrs << " No filename specified" << llendl;
+		LL_ERRS() << " No filename specified" << LL_ENDL;
 		return 0;
 	}
 
@@ -810,35 +884,35 @@ S32 LLViewerKeyboard::loadBindings(const std::string& filename)
 
 		if (tokens_read == EOF)
 		{
-			llinfos << "Unexpected end-of-file at line " << line_count << " of key binding file " << filename << llendl;
+			LL_INFOS() << "Unexpected end-of-file at line " << line_count << " of key binding file " << filename << LL_ENDL;
 			fclose(fp);
 			return 0;
 		}
 		else if (tokens_read < 4)
 		{
-			llinfos << "Can't read line " << line_count << " of key binding file " << filename << llendl;
+			LL_INFOS() << "Can't read line " << line_count << " of key binding file " << filename << LL_ENDL;
 			continue;
 		}
 
 		// convert mode
 		if (!modeFromString(mode_string, &mode))
 		{
-			llinfos << "Unknown mode on line " << line_count << " of key binding file " << filename << llendl;
-			llinfos << "Mode must be one of FIRST_PERSON, THIRD_PERSON, EDIT, EDIT_AVATAR" << llendl;
+			LL_INFOS() << "Unknown mode on line " << line_count << " of key binding file " << filename << LL_ENDL;
+			LL_INFOS() << "Mode must be one of FIRST_PERSON, THIRD_PERSON, EDIT, EDIT_AVATAR" << LL_ENDL;
 			continue;
 		}
 
 		// convert key
 		if (!LLKeyboard::keyFromString(key_string, &key))
 		{
-			llinfos << "Can't interpret key on line " << line_count << " of key binding file " << filename << llendl;
+			LL_INFOS() << "Can't interpret key on line " << line_count << " of key binding file " << filename << LL_ENDL;
 			continue;
 		}
 
 		// convert mask
 		if (!LLKeyboard::maskFromString(mask_string, &mask))
 		{
-			llinfos << "Can't interpret mask on line " << line_count << " of key binding file " << filename << llendl;
+			LL_INFOS() << "Can't interpret mask on line " << line_count << " of key binding file " << filename << LL_ENDL;
 			continue;
 		}
 

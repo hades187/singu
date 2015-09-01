@@ -534,6 +534,11 @@
 		</menu_item_call>
 		<menu_item_separator bottom="-167" enabled="true" height="8" label="-----------" left="0"
 		     mouse_opaque="true" name="separator3" width="185" />
+      <menu
+       create_jump_keys="true"
+       label="Status"
+       name="Status"
+       tear_off="true">
     	<menu_item_call bottom="-186" enabled="true" height="19" label="Fake Away Status" left="0"
      		mouse_opaque="true" name="Fake Away Status" width="185">
       		<on_click function="World.FakeAway" userdata="" />
@@ -546,6 +551,38 @@
 		     mouse_opaque="true" name="Set Busy" width="185">
 			<on_click function="World.SetBusy" userdata="" />
 		</menu_item_call>
+		<menu create_jump_keys="true" label="Autoresponse" name="Autoresponse" tear_off="true">
+			<menu_item_check label="Repeat" name="Repeat">
+				<on_click function="TogglePerAccountControl" userdata="AscentInstantMessageResponseRepeat"/>
+				<on_check control="AscentInstantMessageResponseRepeat"/>
+			</menu_item_check>
+			<menu_item_check label="Only send when away" name="Only send when away">
+				<on_click function="TogglePerAccountControl" userdata="AutoresponseOnlyIfAway"/>
+				<on_check control="AutoresponseOnlyIfAway"/>
+			</menu_item_check>
+			<menu_item_separator/>
+			<menu_item_check label="General" name="General">
+				<on_click function="TogglePerAccountControl" userdata="AutoresponseAnyone"/>
+				<on_check control="AutoresponseAnyone"/>
+			</menu_item_check>
+			<menu_item_check label="&#8226;Friends Only" name="Friends Only">
+				<on_click function="TogglePerAccountControl" userdata="AutoresponseAnyoneFriendsOnly"/>
+				<on_check control="AutoresponseAnyoneFriendsOnly"/>
+			</menu_item_check>
+			<menu_item_check label="Non-Friends" name="Non-Friends">
+				<on_click function="TogglePerAccountControl" userdata="AutoresponseNonFriends"/>
+				<on_check control="AutoresponseNonFriends"/>
+			</menu_item_check>
+			<menu_item_check label="Muted" name="Muted">
+				<on_click function="TogglePerAccountControl" userdata="AutoresponseMuted"/>
+				<on_check control="AutoresponseMuted"/>
+			</menu_item_check>
+		</menu>
+		<menu_item_check label="Sit when away" name="Sit when away">
+			<on_click function="ToggleControl" userdata="AlchemySitOnAway" />
+			<on_check control="AlchemySitOnAway" />
+		</menu_item_check>
+      </menu>
 		<menu_item_call bottom="-281" enabled="false" height="19" label="Stop Animating My Avatar" left="0"
 		     mouse_opaque="true" name="Stop Animating My Avatar" width="250">
 			<on_click function="Tools.StopAllAnimations" userdata="" />
@@ -1030,11 +1067,19 @@
 		<menu_item_call label="Animation Override..." mouse_opaque="true" name="Animation Override ...">
 			<on_click function="ShowFloater" userdata="ao"/>
 		</menu_item_call>
+		<menu_item_check label="Pose Stand" mouse_opaque="true" name="Pose Stand">
+			<on_click function="PoseStand"/>
+			<on_check function="CheckPoseStand"/>
+		</menu_item_check>
 		<menu_item_check label="Nimble" mouse_opaque="true" name="Nimble">
 			<on_click function="ToggleControl" userdata="Nimble"/>
 			<on_check control="Nimble"/>
 		</menu_item_check>
 		<menu_item_separator mouse_opaque="true" name="separators3"/>
+		<menu_item_check label="Region Tracker" name="Region Tracker">
+			<on_click function="ShowFloater" userdata="region_tracker"/>
+			<on_check function="FloaterVisible" userdata="region_tracker"/>
+		</menu_item_check>
 		<menu_item_check label="Object Area Search" mouse_opaque="true" name="Object Area Search">
 			<on_click function="ShowFloater" userdata="areasearch"/>
 			<on_check function="FloaterVisible" userdata="areasearch"/>
@@ -1055,10 +1100,6 @@
 			<on_click function="ShowFloater" userdata="media ticker"/>
 			<on_check function="FloaterVisible" userdata="media ticker"/>
 			<on_enable function="EnableStreamingAudioDisplay"/>
-		</menu_item_check>
-		<menu_item_check label="Pose Stand" mouse_opaque="true" name="Pose Stand">
-			<on_click function="PoseStand"/>
-			<on_check function="CheckPoseStand"/>
 		</menu_item_check>
 		<menu_item_check label="Region Debug Console" mouse_opaque="true" name="Region Debug Console">
 			<on_click function="ShowFloater" userdata="RegionDebugConsole"/>

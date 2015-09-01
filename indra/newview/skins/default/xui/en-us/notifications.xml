@@ -1307,48 +1307,6 @@ Connection to Socks5 proxy [PROXY] was successful.
   </notification>
 
   <notification
-   icon="alertmodal.tga"
-   name="SOCKS_NOT_PERMITTED"
-   type="alertmodal">
-The Socks5 proxy "[PROXY]" refused the connection, not allowed by rule set
-  </notification>
-
-  <notification
-   icon="alertmodal.tga"
-   name="SOCKS_CONNECT_ERROR"
-   type="alertmodal">
-The Socks5 proxy "[PROXY]" refused the connection, could not open TCP channel
-  </notification>
-
-  <notification
-   icon="alertmodal.tga"
-   name="SOCKS_NOT_ACCEPTABLE"
-   type="alertmodal">
-The Socks5 proxy "[PROXY]" refused the selected authentication system
-  </notification>
-
-  <notification
-   icon="alertmodal.tga"
-   name="SOCKS_AUTH_FAIL"
-   type="alertmodal">
-The Socks5 proxy "[PROXY]" reported your credentials are invalid
-  </notification>
-
-  <notification
-   icon="alertmodal.tga"
-   name="SOCKS_UDP_FWD_NOT_GRANTED"
-   type="alertmodal">
-The Socks5 proxy "[PROXY]" refused the UDP associate request
-  </notification>
-
-  <notification
-   icon="alertmodal.tga"
-   name="SOCKS_HOST_CONNECT_FAILED"
-   type="alertmodal">
-Could not connect to Socks5 proxy server "[PROXY]"
-  </notification>
-
-  <notification
    icon="notify.tga"
    name="ChangeSkin"
    type="notfy">
@@ -8461,6 +8419,138 @@ Only textures will upload as temporary on Agni and Aditi.
   </notification>
 
   <notification
+   icon="alertmodal.tga"
+   name="SOCKS_NOT_PERMITTED"
+   type="alertmodal">
+	The SOCKS 5 proxy "[HOST]:[PORT]" refused the connection, not allowed by rule set.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_CONNECT_ERROR"
+   type="alertmodal">
+	The SOCKS 5 proxy "[HOST]:[PORT]" refused the connection, could not open TCP channel.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_NOT_ACCEPTABLE"
+   type="alertmodal">
+	The SOCKS 5 proxy "[HOST]:[PORT]" refused the selected authentication system.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_AUTH_FAIL"
+   type="alertmodal">
+	The SOCKS 5 proxy "[HOST]:[PORT]" reported your credentials are invalid.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_UDP_FWD_NOT_GRANTED"
+   type="alertmodal">
+	The SOCKS 5 proxy "[HOST]:[PORT]" refused the UDP associate request.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_HOST_CONNECT_FAILED"
+   type="alertmodal">
+	Could not connect to SOCKS 5 proxy server "[HOST]:[PORT]".
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_UNKNOWN_STATUS"
+   type="alertmodal">
+	Unknown proxy error with server "[HOST]:[PORT]".
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_INVALID_HOST"
+   type="alertmodal">
+	Invalid SOCKS proxy address or port "[HOST]:[PORT]".
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="SOCKS_BAD_CREDS"
+   type="alertmodal">
+	Invalid SOCKS 5 username or password.
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="PROXY_INVALID_HTTP_HOST"
+   type="alertmodal">
+    Invalid HTTP proxy address or port "[HOST]:[PORT]".
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="PROXY_INVALID_SOCKS_HOST"
+   type="alertmodal">
+	Invalid SOCKS proxy address or port "[HOST]:[PORT]".
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="ChangeProxySettings"
+   type="alert">
+	Proxy settings take effect after you restart [APP_NAME].
+	<tag>fail</tag>
+   <usetemplate
+     name="okbutton"
+     yestext="OK"/>
+  </notification>
+
+  <notification
   name="AuthRequest"
   type="browser">
 The site at &apos;[HOST_NAME]&apos; in realm &apos;[REALM]&apos; requires a user name and password.
@@ -10362,6 +10452,48 @@ Changes won't take effect until after you restart [APP_NAME].
 
   <!-- Alchemy Notifications-->
   <notification
+   icon="notifytip.tga"
+   name="ChatCommandCalc"
+   type="notifytip">
+   Calculation: [EXPRESSION] = [RESULT]
+  </notification>
+
+  <notification
+   icon="notifytip.tga"
+   name="ChatCommandCalcFailed"
+   type="notifytip">
+   Calculation failed.
+  </notification>
+
+  <notification
+   icon="notifytip.tga"
+   name="ChatCommandDiceRoll"
+   type="notifytip">
+    Dice Roll: [RESULT]
+  </notification>
+
+  <notification
+   icon="alert.tga"
+   name="RegionTrackerAdd"
+   type="alert">
+What label would you like to use for
+the region &quot;[REGION]&quot;?
+    <tag>confirm</tag>
+    <form name="form">
+      <input name="label" type="text">[LABEL]</input>
+      <button
+       default="true"
+       index="0"
+       name="OK"
+       text="OK"/>
+      <button
+       index="1"
+       name="Cancel"
+       text="Cancel"/>
+    </form>
+  </notification>
+
+  <notification
     icon="alertmodal.tga"
     name="RevokedMapRights"
     persist="true"
@@ -10416,6 +10548,18 @@ Would you like to enable announcing keys to objects in the sim?
      yestext="Yes"
      notext="No"
      canceltext="No, don't ask again!"/>
+  </notification>
+
+  <notification
+   icon="alertmodal.tga"
+   name="RezRestoreToWorld"
+   type="alertmodal">
+The object you're attempting to restore in world is no copy, if you do not have rez rights at &lt;0, 0, 0&gt;, you will lose this object!!
+    <usetemplate
+     ignoretext="Confirm before restoring no-copy objects to world"
+     name="okcancelignore"
+     notext="Don't Rez!"
+     yestext="Proceed?"/>
   </notification>
 
   <notification

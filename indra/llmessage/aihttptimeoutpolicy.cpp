@@ -239,41 +239,41 @@ void AIHTTPTimeoutPolicy::base_changed(void)
 void AIHTTPTimeoutPolicy::setDefaultCurlTimeout(AIHTTPTimeoutPolicy const& timeout)
 {
   sDebugSettingsCurlTimeout = timeout;
-  llinfos << "CurlTimeout Debug Settings now"
+  LL_INFOS() << "CurlTimeout Debug Settings now"
 	  ": DNSLookup: " << sDebugSettingsCurlTimeout.mDNSLookupGrace <<
 	  "; Connect: " << sDebugSettingsCurlTimeout.mMaximumConnectTime <<
 	  "; ReplyDelay: " << sDebugSettingsCurlTimeout.mMaximumReplyDelay <<
 	  "; LowSpeedTime: " << sDebugSettingsCurlTimeout.mLowSpeedTime <<
 	  "; LowSpeedLimit: " << sDebugSettingsCurlTimeout.mLowSpeedLimit <<
 	  "; MaxTransaction: " << sDebugSettingsCurlTimeout.mMaximumCurlTransaction <<
-	  "; MaxTotalDelay: " << sDebugSettingsCurlTimeout.mMaximumTotalDelay << llendl;
+	  "; MaxTotalDelay: " << sDebugSettingsCurlTimeout.mMaximumTotalDelay << LL_ENDL;
   if (sDebugSettingsCurlTimeout.mDNSLookupGrace < AITP_default_DNS_lookup_grace)
   {
-	llwarns << "CurlTimeoutDNSLookup (" << sDebugSettingsCurlTimeout.mDNSLookupGrace << ") is lower than the built-in default value (" << AITP_default_DNS_lookup_grace << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutDNSLookup (" << sDebugSettingsCurlTimeout.mDNSLookupGrace << ") is lower than the built-in default value (" << AITP_default_DNS_lookup_grace << ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mMaximumConnectTime < AITP_default_maximum_connect_time)
   {
-	llwarns << "CurlTimeoutConnect (" << sDebugSettingsCurlTimeout.mMaximumConnectTime << ") is lower than the built-in default value (" << AITP_default_maximum_connect_time << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutConnect (" << sDebugSettingsCurlTimeout.mMaximumConnectTime << ") is lower than the built-in default value (" << AITP_default_maximum_connect_time << ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mMaximumReplyDelay < AITP_default_maximum_reply_delay)
   {
-	llwarns << "CurlTimeoutReplyDelay (" << sDebugSettingsCurlTimeout.mMaximumReplyDelay << ") is lower than the built-in default value (" << AITP_default_maximum_reply_delay << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutReplyDelay (" << sDebugSettingsCurlTimeout.mMaximumReplyDelay << ") is lower than the built-in default value (" << AITP_default_maximum_reply_delay << ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mLowSpeedTime < AITP_default_low_speed_time)
   {
-	llwarns << "CurlTimeoutLowSpeedTime (" << sDebugSettingsCurlTimeout.mLowSpeedTime << ") is lower than the built-in default value (" << AITP_default_low_speed_time << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutLowSpeedTime (" << sDebugSettingsCurlTimeout.mLowSpeedTime << ") is lower than the built-in default value (" << AITP_default_low_speed_time << ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mLowSpeedLimit > AITP_default_low_speed_limit)
   {
-	llwarns << "CurlTimeoutLowSpeedLimit (" << sDebugSettingsCurlTimeout.mLowSpeedLimit << ") is higher than the built-in default value (" << AITP_default_low_speed_limit << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutLowSpeedLimit (" << sDebugSettingsCurlTimeout.mLowSpeedLimit << ") is higher than the built-in default value (" << AITP_default_low_speed_limit << ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mMaximumCurlTransaction < AITP_default_maximum_curl_transaction)
   {
-	llwarns << "CurlTimeoutMaxTransaction (" << sDebugSettingsCurlTimeout.mMaximumCurlTransaction << ") is lower than the built-in default value (" << AITP_default_maximum_curl_transaction<< ")." << llendl;
+	LL_WARNS() << "CurlTimeoutMaxTransaction (" << sDebugSettingsCurlTimeout.mMaximumCurlTransaction << ") is lower than the built-in default value (" << AITP_default_maximum_curl_transaction<< ")." << LL_ENDL;
   }
   if (sDebugSettingsCurlTimeout.mMaximumTotalDelay < AITP_default_maximum_total_delay)
   {
-	llwarns << "CurlTimeoutMaxTotalDelay (" << sDebugSettingsCurlTimeout.mMaximumTotalDelay << ") is lower than the built-in default value (" << AITP_default_maximum_total_delay << ")." << llendl;
+	LL_WARNS() << "CurlTimeoutMaxTotalDelay (" << sDebugSettingsCurlTimeout.mMaximumTotalDelay << ") is lower than the built-in default value (" << AITP_default_maximum_total_delay << ")." << LL_ENDL;
   }
 }
 
@@ -887,7 +887,7 @@ AIHTTPTimeoutPolicy const* AIHTTPTimeoutPolicy::getTimeoutPolicyByName(std::stri
   {
 	if (!name.empty())
 	{
-	  llwarns << "Cannot find AIHTTPTimeoutPolicy with name \"" << name << "\"." << llendl;
+	  LL_WARNS() << "Cannot find AIHTTPTimeoutPolicy with name \"" << name << "\"." << LL_ENDL;
 	}
 	return &sDebugSettingsCurlTimeout;
   }
@@ -908,6 +908,7 @@ AIHTTPTimeoutPolicy const* AIHTTPTimeoutPolicy::getTimeoutPolicyByName(std::stri
 P(assetReportHandler);
 P(authHandler);
 P2(baseCapabilitiesComplete,					transfer_18s_connect_5s);
+P2(baseCapabilitiesCompleteTracker,				transfer_18s_connect_5s);
 P(blockingLLSDPost);
 P(blockingLLSDGet);
 P(blockingRawGet);
@@ -917,21 +918,20 @@ P(emeraldDicDownloader);
 P(environmentApplyResponder);
 P(environmentRequestResponder);
 P2(eventPollResponder,							reply_60s);
-P(fetchInventoryResponder);
+P(FetchItemHttpHandler);
 P(fetchScriptLimitsAttachmentInfoResponder);
 P(fetchScriptLimitsRegionDetailsResponder);
 P(fetchScriptLimitsRegionInfoResponder);
 P(fetchScriptLimitsRegionSummaryResponder);
 P(fnPtrResponder);
 P(floaterPermsResponder);
-P2(gamingDataReceived,							transfer_22s_connect_10s);
 P2(groupProposalBallotResponder,				transfer_300s);
 P(homeLocationResponder);
 P2(HTTPGetResponder,							reply_15s);
 P(iamHere);
 P(iamHereVoice);
-P2(inventoryModelFetchDescendentsResponder,		transfer_300s);
-P(inventoryModelFetchItemResponder);
+P2(BGFolderHttpHandler, transfer_300s);
+P(BGItemHttpHandler);
 P(lcl_responder);
 P(mapLayerResponder);
 P(materialsResponder);
@@ -943,7 +943,6 @@ P2(meshHeaderResponder,							connect_30s);
 P2(meshLODResponder,							connect_30s);
 P2(meshPhysicsShapeResponder,					connect_30s);
 P2(meshSkinInfoResponder,						connect_30s);
-P(mimeDiscoveryResponder);
 P(moderationResponder);
 P(objectCostResponder);
 P(physicsFlagsResponder);
@@ -951,16 +950,15 @@ P(productInfoRequestResponder);
 P(regionResponder);
 P(remoteParcelRequestResponder);
 P(requestAgentUpdateAppearance);
+P2(incrementCofVersionResponder_timeouts,		transfer_30s_connect_10s);
 P(responderIgnore);
 P(setDisplayNameResponder);
-P2(simulatorFeaturesReceived,					transfer_22s_connect_10s);
+P2(baseFeaturesReceived,						transfer_22s_connect_10s);
 P2(startGroupVoteResponder,						transfer_300s);
 P(translationReceiver);
 P(uploadModelPremissionsResponder);
 P(verifiedDestinationResponder);
 P(viewerChatterBoxInvitationAcceptResponder);
-P(viewerMediaOpenIDResponder);
-P(viewerMediaWebProfileResponder);
 P(viewerStatsResponder);
 P(voiceCallCapResponder);
 P(webProfileResponders);

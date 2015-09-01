@@ -1686,7 +1686,6 @@ class LLAdvancedToggleWireframe : public view_listener_t
 // [/RLVa:KB]
 //		gUseWireframe = !(gUseWireframe);
 //		gWindowResized = TRUE; // Singu Note: We don't use this (yet?)
-		LLPipeline::updateRenderDeferred();
 		gPipeline.resetVertexBuffers();
 //		return true;
 	}
@@ -2067,11 +2066,11 @@ class LLObjectDerender : public view_listener_t
 		if(node)
 		{
 			root_key = node->getObject()->getID();
-			llinfos << "Derender node has key " << root_key << llendl;
+			LL_INFOS() << "Derender node has key " << root_key << LL_ENDL;
 		}
 		else
 		{
-			llinfos << "Derender node is null " << llendl;
+			LL_INFOS() << "Derender node is null " << LL_ENDL;
 		}
 
 		LLViewerRegion* cur_region = gAgent.getRegion();
@@ -2501,7 +2500,7 @@ bool enable_object_mute()
 		bool is_self = avatar->isSelf();
 //		return !is_linden && !is_self;
 // [RLVa:KB] - Checked: 2010-08-25 (RLVa-1.2.1b) | Added: RLVa-1.2.1b
-		return !is_linden && !is_self && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES);
+		return !is_linden && !is_self && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS);
 // [/RLVa:KB]
 	}
 	else
@@ -2535,7 +2534,7 @@ class LLObjectMute : public view_listener_t
 		if (avatar)
 		{
 // [RLVa:KB] - Checked: 2010-08-25 (RLVa-1.2.1b) | Added: RLVa-1.0.0e
-			if (gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES))
+			if (gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) || gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS))
 				return true;
 // [/RLVa:KB]
 			id = avatar->getID();
@@ -2956,7 +2955,7 @@ void handle_avatar_freeze(const LLSD& avatar_id)
 				LLSD args;
 //				args["AVATAR_NAME"] = fullname;
 // [RLVa:KB] - Checked: 2010-09-28 (RLVa-1.2.1f) | Modified: RLVa-1.0.0e
-				args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) ? fullname : RlvStrings::getAnonym(fullname);
+				args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) ? fullname : RlvStrings::getAnonym(fullname);
 // [/RLVa:KB]
 				LLNotificationsUtil::add("FreezeAvatarFullname",
 							args,
@@ -3156,7 +3155,7 @@ void handle_avatar_eject(const LLSD& avatar_id)
     				LLSD args;
 //					args["AVATAR_NAME"] = fullname;
 // [RLVa:KB] - Checked: 2010-09-28 (RLVa-1.2.1f) | Modified: RLVa-1.0.0e
-					args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) ? fullname : RlvStrings::getAnonym(fullname);
+					args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) ? fullname : RlvStrings::getAnonym(fullname);
 // [/RLVa:KB]
     				LLNotificationsUtil::add("EjectAvatarFullname",
     							args,
@@ -3179,7 +3178,7 @@ void handle_avatar_eject(const LLSD& avatar_id)
     				LLSD args;
 //					args["AVATAR_NAME"] = fullname;
 // [RLVa:KB] - Checked: 2010-09-28 (RLVa-1.2.1f) | Modified: RLVa-1.0.0e
-					args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) ? fullname : RlvStrings::getAnonym(fullname);
+					args["AVATAR_NAME"] = (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) ? fullname : RlvStrings::getAnonym(fullname);
 // [/RLVa:KB]
     				LLNotificationsUtil::add("EjectAvatarFullnameNoBan",
     							args,
@@ -3278,31 +3277,35 @@ class LLAvatarGiveCard : public view_listener_t
 {
 	bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
 	{
-		llinfos << "handle_give_card()" << llendl;
+		LL_INFOS() << "handle_give_card()" << LL_ENDL;
 		LLViewerObject* dest = LLSelectMgr::getInstance()->getSelection()->getPrimaryObject();
-//		if(dest && dest->isAvatar())
-// [RLVa:KB] - Checked: 2010-06-04 (RLVa-1.2.0d) | Modified: RLVa-1.2.0d | OK
-		if ( (dest && dest->isAvatar()) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) )
-// [/RLVa:KB]
+		if (dest && dest->isAvatar())
 		{
 			bool found_name = false;
 			LLSD args;
-			LLSD old_args;
-			LLNameValue* nvfirst = dest->getNVPair("FirstName");
-			LLNameValue* nvlast = dest->getNVPair("LastName");
-			if(nvfirst && nvlast)
+// [RLVa:KB] - Checked: 2010-06-04 (RLVa-1.2.0d) | Modified: RLVa-1.2.0d | OK
+			if (gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) || gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS))
 			{
-				args["NAME"] = std::string(nvfirst->getString()) + " " + nvlast->getString();
-				old_args["NAME"] = std::string(nvfirst->getString()) + " " + nvlast->getString();
+				args["NAME"] = RlvStrings::getString(RLV_STRING_HIDDEN);
 				found_name = true;
 			}
-			LLViewerRegion* region = dest->getRegion();
+			else
+// [/RLVa:KB]
+			{
+				LLNameValue* nvfirst = dest->getNVPair("FirstName");
+				LLNameValue* nvlast = dest->getNVPair("LastName");
+				if (nvfirst && nvlast)
+				{
+					args["NAME"] = std::string(nvfirst->getString()) + " " + nvlast->getString();
+					found_name = true;
+				}
+			}
 			LLHost dest_host;
-			if(region)
+			if (LLViewerRegion* region = dest->getRegion())
 			{
 				dest_host = region->getHost();
 			}
-			if(found_name && dest_host.isOk())
+			if (found_name && dest_host.isOk())
 			{
 				LLMessageSystem* msg = gMessageSystem;
 				msg->newMessage("OfferCallingCard");
@@ -3319,7 +3322,7 @@ class LLAvatarGiveCard : public view_listener_t
 			}
 			else
 			{
-				LLNotificationsUtil::add("CantOfferCallingCard", old_args);
+				LLNotificationsUtil::add("CantOfferCallingCard", args);
 			}
 		}
 		return true;
@@ -3448,7 +3451,7 @@ void handle_buy_contents(LLSaleInfo sale_info)
 
 void handle_region_dump_temp_asset_data(void*)
 {
-	llinfos << "Dumping temporary asset data to simulator logs" << llendl;
+	LL_INFOS() << "Dumping temporary asset data to simulator logs" << LL_ENDL;
 	std::vector<std::string> strings;
 	LLUUID invoice;
 	send_generic_message("dumptempassetdata", strings, invoice);
@@ -3456,7 +3459,7 @@ void handle_region_dump_temp_asset_data(void*)
 
 void handle_region_clear_temp_asset_data(void*)
 {
-	llinfos << "Clearing temporary asset data" << llendl;
+	LL_INFOS() << "Clearing temporary asset data" << LL_ENDL;
 	std::vector<std::string> strings;
 	LLUUID invoice;
 	send_generic_message("cleartempassetdata", strings, invoice);
@@ -3467,14 +3470,14 @@ void handle_region_dump_settings(void*)
 	LLViewerRegion* regionp = gAgent.getRegion();
 	if (regionp)
 	{
-		llinfos << "Damage:    " << (regionp->getAllowDamage() ? "on" : "off") << llendl;
-		llinfos << "Landmark:  " << (regionp->getAllowLandmark() ? "on" : "off") << llendl;
-		llinfos << "SetHome:   " << (regionp->getAllowSetHome() ? "on" : "off") << llendl;
-		llinfos << "ResetHome: " << (regionp->getResetHomeOnTeleport() ? "on" : "off") << llendl;
-		llinfos << "SunFixed:  " << (regionp->getSunFixed() ? "on" : "off") << llendl;
-		llinfos << "BlockFly:  " << (regionp->getBlockFly() ? "on" : "off") << llendl;
-		llinfos << "AllowP2P:  " << (regionp->getAllowDirectTeleport() ? "on" : "off") << llendl;
-		llinfos << "Water:     " << (regionp->getWaterHeight()) << llendl;
+		LL_INFOS() << "Damage:    " << (regionp->getAllowDamage() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "Landmark:  " << (regionp->getAllowLandmark() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "SetHome:   " << (regionp->getAllowSetHome() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "ResetHome: " << (regionp->getResetHomeOnTeleport() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "SunFixed:  " << (regionp->getSunFixed() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "BlockFly:  " << (regionp->getBlockFly() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "AllowP2P:  " << (regionp->getAllowDirectTeleport() ? "on" : "off") << LL_ENDL;
+		LL_INFOS() << "Water:     " << (regionp->getWaterHeight()) << LL_ENDL;
 	}
 }
 
@@ -3510,7 +3513,7 @@ void handle_dump_focus(void *)
 {
 	LLUICtrl *ctrl = dynamic_cast<LLUICtrl*>(gFocusMgr.getKeyboardFocus());
 
-	llinfos << "Keyboard focus " << (ctrl ? ctrl->getName() : "(none)") << llendl;
+	LL_INFOS() << "Keyboard focus " << (ctrl ? ctrl->getName() : "(none)") << LL_ENDL;
 }
 
 class LLSelfSitOrStand : public view_listener_t
@@ -3666,7 +3669,7 @@ void process_grant_godlike_powers(LLMessageSystem* msg, void**)
 	}
 	else
 	{
-		llwarns << "Grant godlike for wrong agent " << agent_id << llendl;
+		LL_WARNS() << "Grant godlike for wrong agent " << agent_id << LL_ENDL;
 	}
 }
 
@@ -3740,7 +3743,7 @@ class LLAvatarEnableAddFriend : public view_listener_t
 		LLVOAvatar* avatar = find_avatar_from_object(LLSelectMgr::getInstance()->getSelection()->getPrimaryObject());
 //		bool new_value = avatar && !LLAvatarActions::isFriend(avatar->getID());
 // [RLVa:KB] - Checked: 2010-04-20 (RLVa-1.2.0f) | Modified: RLVa-1.2.0f
-		bool new_value = avatar && !LLAvatarActions::isFriend(avatar->getID()) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES));
+		bool new_value = avatar && !LLAvatarActions::isFriend(avatar->getID()) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS));
 // [/RLVa:KB]
 		gMenuHolder->findControl(userdata["control"].asString())->setValue(new_value);
 		return true;
@@ -3922,8 +3925,8 @@ class LLCreateLandmarkCallback : public LLInventoryCallback
 public:
 	/*virtual*/ void fire(const LLUUID& inv_item)
 	{
-		llinfos << "Created landmark with inventory id " << inv_item
-			<< llendl;
+		LL_INFOS() << "Created landmark with inventory id " << inv_item
+			<< LL_ENDL;
 	}
 };
 
@@ -3978,7 +3981,7 @@ void velocity_interpolate( void* data )
 		msg->addUUIDFast(_PREHASH_AgentID, gAgent.getID());
 		msg->addUUIDFast(_PREHASH_SessionID, gAgent.getSessionID());
 		gAgent.sendReliableMessage();
-		llinfos << "Velocity Interpolation On" << llendl;
+		LL_INFOS() << "Velocity Interpolation On" << LL_ENDL;
 	}
 	else
 	{
@@ -3987,7 +3990,7 @@ void velocity_interpolate( void* data )
 		msg->addUUIDFast(_PREHASH_AgentID, gAgent.getID());
 		msg->addUUIDFast(_PREHASH_SessionID, gAgent.getSessionID());
 		gAgent.sendReliableMessage();
-		llinfos << "Velocity Interpolation Off" << llendl;
+		LL_INFOS() << "Velocity Interpolation Off" << LL_ENDL;
 	}
 	// BUG this is a hack because of the change in menu behavior.  The
 	// old menu system would automatically change a control's value,
@@ -4041,6 +4044,8 @@ void reset_view_final( BOOL proceed )
 	{
 		return;
 	}
+
+	if (gRlvHandler.hasBehaviour(RLV_BHVR_CAMDISTMAX) && gRlvHandler.camPole(RLV_BHVR_CAMDISTMAX) <= 0) return; // RLVa:LF - Trapped in mouselook; avoid extra work (and potential glitches)
 
 	if (!gViewerWindow->getLeftMouseDown() && gAgentCamera.cameraThirdPerson() && gSavedSettings.getBOOL("ResetViewTurnsAvatar") && !gSavedSettings.getBOOL("FreezeTime"))
 	{
@@ -4144,7 +4149,7 @@ class LLEditEnableDuplicate : public view_listener_t
 
 void handle_duplicate_in_place(void*)
 {
-	llinfos << "handle_duplicate_in_place" << llendl;
+	LL_INFOS() << "handle_duplicate_in_place" << LL_ENDL;
 
 	LLVector3 offset(0.f, 0.f, 0.f);
 	LLSelectMgr::getInstance()->selectDuplicate(offset, TRUE);
@@ -4324,7 +4329,7 @@ void handle_dump_archetype_xml_continued(LLVOAvatar* avatar, AIFilePicker* filep
 {
 	if (!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	avatar->dumpArchetypeXML_cont(filepicker->getFilename(), false);
@@ -4343,7 +4348,7 @@ static bool get_derezzable_objects(
 	EDeRezDestination dest,
 	std::string& error,
 	LLViewerRegion*& first_region,
-	LLDynamicArray<LLViewerObjectPtr>* derez_objectsp,
+	std::vector<LLViewerObjectPtr>* derez_objectsp,
 	bool only_check = false)
 {
 	bool found = false;
@@ -4386,7 +4391,7 @@ static bool get_derezzable_objects(
 			&& dest != DRD_RETURN_TO_OWNER)
 		{
 			// this object is an asset container, derez its contents, not it
-			llwarns << "Attempt to derez deprecated AssetContainer object type not supported." << llendl;
+			LL_WARNS() << "Attempt to derez deprecated AssetContainer object type not supported." << LL_ENDL;
 			/*
 			object->requestInventory(container_inventory_arrived, 
 				(void *)(BOOL)(DRD_TAKE_INTO_AGENT_INVENTORY == dest));
@@ -4428,7 +4433,7 @@ static bool get_derezzable_objects(
 				break;
 
 			if (derez_objectsp)
-				derez_objectsp->put(object);
+				derez_objectsp->push_back(object);
 
 		}
 	}
@@ -4448,16 +4453,16 @@ static void derez_objects(
 	const LLUUID& dest_id,
 	LLViewerRegion*& first_region,
 	std::string& error,
-	LLDynamicArray<LLViewerObjectPtr>* objectsp)
+	std::vector<LLViewerObjectPtr>* objectsp)
 {
-	LLDynamicArray<LLViewerObjectPtr> derez_objects;
+	std::vector<LLViewerObjectPtr> derez_objects;
 
 	if (!objectsp) // if objects to derez not specified
 	{
 		// get them from selection
 		if (!get_derezzable_objects(dest, error, first_region, &derez_objects, false))
 		{
-			llwarns << "No objects to derez" << llendl;
+			LL_WARNS() << "No objects to derez" << LL_ENDL;
 			return;
 		}
 
@@ -4477,13 +4482,13 @@ static void derez_objects(
 	// satisfy anybody.
 	const S32 MAX_ROOTS_PER_PACKET = 250;
 	const S32 MAX_PACKET_COUNT = 254;
-	F32 packets = ceil((F32)objectsp->count() / (F32)MAX_ROOTS_PER_PACKET);
+	F32 packets = ceil((F32)objectsp->size() / (F32)MAX_ROOTS_PER_PACKET);
 	if(packets > (F32)MAX_PACKET_COUNT)
 	{
 		error = "AcquireErrorTooManyObjects";
 	}
 
-	if(error.empty() && objectsp->count() > 0)
+	if(error.empty() && objectsp->size() > 0)
 	{
 		U8 d = (U8)dest;
 		LLUUID tid;
@@ -4508,11 +4513,11 @@ static void derez_objects(
 			msg->addU8Fast(_PREHASH_PacketCount, packet_count);
 			msg->addU8Fast(_PREHASH_PacketNumber, packet_number);
 			objects_in_packet = 0;
-			while((object_index < objectsp->count())
+			while((object_index < (S32)objectsp->size())
 				  && (objects_in_packet++ < MAX_ROOTS_PER_PACKET))
 
 			{
-				LLViewerObject* object = objectsp->get(object_index++);
+				LLViewerObject* object = objectsp->at(object_index++);
 				msg->nextBlockFast(_PREHASH_ObjectData);
 				msg->addU32Fast(_PREHASH_ObjectLocalID, object->getLocalID());
 				// <edit>
@@ -4622,7 +4627,7 @@ private:
 
 	LLObjectSelectionHandle mObjectSelection;
 
-	LLDynamicArray<LLViewerObjectPtr> mReturnableObjects;
+	std::vector<LLViewerObjectPtr> mReturnableObjects;
 	std::string mError;
 	LLViewerRegion* mFirstRegion;
 };
@@ -4970,7 +4975,7 @@ bool callback_show_buy_currency(const LLSD& notification, const LLSD& response)
 	S32 option = LLNotification::getSelectedOption(notification, response);
 	if (0 == option)
 	{
-		llinfos << "Loading page " << BUY_CURRENCY_URL << llendl;
+		LL_INFOS() << "Loading page " << BUY_CURRENCY_URL << LL_ENDL;
 		LLWeb::loadURL(BUY_CURRENCY_URL);
 	}
 	return false;
@@ -5523,7 +5528,7 @@ public:
 	};
 
 	LLObjectSelectionHandle mObjectSelection;
-	LLDynamicArray<LLViewerObjectPtr> mReturnableObjects;
+	std::vector<LLViewerObjectPtr> mReturnableObjects;
 	std::string mError;
 	LLViewerRegion *mFirstRegion;
 };
@@ -5711,7 +5716,7 @@ void print_agent_nvpairs(void*)
 {
 	LLViewerObject *objectp;
 
-	llinfos << "Agent Name Value Pairs" << llendl;
+	LL_INFOS() << "Agent Name Value Pairs" << LL_ENDL;
 
 	objectp = gAgentAvatarp;
 	if (objectp)
@@ -5720,10 +5725,10 @@ void print_agent_nvpairs(void*)
 	}
 	else
 	{
-		llinfos << "Can't find agent object" << llendl;
+		LL_INFOS() << "Can't find agent object" << LL_ENDL;
 	}
 
-	llinfos << "Camera at " << gAgentCamera.getCameraPositionGlobal() << llendl;
+	LL_INFOS() << "Camera at " << gAgentCamera.getCameraPositionGlobal() << LL_ENDL;
 }
 
 void show_debug_menus()
@@ -5773,7 +5778,7 @@ void toggle_debug_menus(void*)
 // 	{
 // 		return;
 // 	}
-// 	llinfos << "Exporting selected objects:" << llendl;
+// 	LL_INFOS() << "Exporting selected objects:" << LL_ENDL;
 
 // 	gExporterRequestID.generate();
 // 	gExportDirectory = "";
@@ -5792,7 +5797,7 @@ void toggle_debug_menus(void*)
 // 		LLViewerObject* object = node->getObject();
 // 		msg->nextBlockFast(_PREHASH_ObjectData);
 // 		msg->addUUIDFast(_PREHASH_ObjectID, object->getID());
-// 		llinfos << "Object: " << object->getID() << llendl;
+// 		LL_INFOS() << "Object: " << object->getID() << LL_ENDL;
 // 	}
 // 	msg->sendReliable(gAgent.getRegion()->getHost());
 
@@ -5811,7 +5816,7 @@ void handle_reload_settings(void*)
 	gSavedSettings.resetToDefaults();
 	gSavedSettings.loadFromFile(gSavedSettings.getString("ClientSettingsFile"));
 
-	llinfos << "Loading colors from colors.xml" << llendl;
+	LL_INFOS() << "Loading colors from colors.xml" << LL_ENDL;
 	std::string color_file = gDirUtilp->getExpandedFilename(LL_PATH_APP_SETTINGS,"colors.xml");
 	gColors.resetToDefaults();
 	gColors.loadFromFileLegacy(color_file, FALSE, TYPE_COL4U);
@@ -5892,15 +5897,10 @@ class LLWorldSetBusy : public view_listener_t
 {
 	bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
 	{
-		if (gAgent.getBusy())
-		{
-			gAgent.clearBusy();
-		}
-		else
-		{
-			gAgent.setBusy();
+		bool busy = !gAgent.isDoNotDisturb();
+		gAgent.setDoNotDisturb(busy);
+		if (busy)
 			LLNotificationsUtil::add("BusyModeSet");
-		}
 		return true;
 	}
 };
@@ -5917,13 +5917,13 @@ class LLWorldCreateLandmark : public view_listener_t
 		LLViewerRegion* agent_region = gAgent.getRegion();
 		if(!agent_region)
 		{
-			llwarns << "No agent region" << llendl;
+			LL_WARNS() << "No agent region" << LL_ENDL;
 			return true;
 		}
 		LLParcel* agent_parcel = LLViewerParcelMgr::getInstance()->getAgentParcel();
 		if (!agent_parcel)
 		{
-			llwarns << "No agent parcel" << llendl;
+			LL_WARNS() << "No agent parcel" << LL_ENDL;
 			return true;
 		}
 		if (!agent_parcel->getAllowLandmark()
@@ -6003,7 +6003,7 @@ class LLAvatarInviteToGroup : public view_listener_t
 		LLVOAvatar* avatar = find_avatar_from_object( LLSelectMgr::getInstance()->getSelection()->getPrimaryObject() );
 //		if(avatar)
 // [RLVa:KB] - Checked: 2010-06-04 (RLVa-1.2.0d) | Added: RLVa-1.2.0d
-		if ( (avatar) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) )
+		if ( (avatar) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) )
 // [/RLVa:KB]
 		{
 			LLAvatarActions::inviteToGroup(avatar->getID());
@@ -6019,7 +6019,7 @@ class LLAvatarAddFriend : public view_listener_t
 		LLVOAvatar* avatar = find_avatar_from_object( LLSelectMgr::getInstance()->getSelection()->getPrimaryObject() );
 //		if(avatar && !LLAvatarActions::isFriend(avatar->getID()))
 // [RLVa:KB] - Checked: 2010-04-20 (RLVa-1.2.0f) | Modified: RLVa-1.2.0f
-		if ( (avatar && !LLAvatarActions::isFriend(avatar->getID())) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) )
+		if ( (avatar && !LLAvatarActions::isFriend(avatar->getID())) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) )
 // [/RLVa:KB]
 		{
 			request_friendship(avatar->getID());
@@ -6033,7 +6033,7 @@ bool complete_give_money(const LLSD& notification, const LLSD& response, LLObjec
 	S32 option = LLNotification::getSelectedOption(notification, response);
 	if (option == 0)
 	{
-		gAgent.clearBusy();
+		gAgent.setDoNotDisturb(false);
 	}
 
 	LLViewerObject* objectp = selection->getPrimaryObject();
@@ -6069,7 +6069,7 @@ void handle_give_money_dialog()
 	LLNotification::Params params("BusyModePay");
 	params.functor(boost::bind(complete_give_money, _1, _2, LLSelectMgr::getInstance()->getSelection()));
 
-	if (gAgent.getBusy())
+	if (gAgent.isDoNotDisturb())
 	{
 		// warn users of being in busy mode during a transaction
 		LLNotifications::instance().add(params);
@@ -6095,7 +6095,7 @@ bool enable_pay_avatar()
 	LLVOAvatar* avatar = find_avatar_from_object(obj);
 //	return (avatar != NULL);
 // [RLVa:KB] - Checked: 2010-08-25 (RLVa-1.2.1b) | Added: RLVa-1.2.1b
-	return (avatar != NULL) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES));
+	return (avatar != NULL) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS));
 // [/RLVa:KB]
 }
 
@@ -6299,7 +6299,7 @@ class LLPromptShowURL : public view_listener_t
 		}
 		else
 		{
-			llinfos << "PromptShowURL invalid parameters! Expecting \"ALERT,URL\"." << llendl;
+			LL_INFOS() << "PromptShowURL invalid parameters! Expecting \"ALERT,URL\"." << LL_ENDL;
 		}
 		return true;
 	}
@@ -6332,7 +6332,7 @@ class LLPromptShowFile : public view_listener_t
 		}
 		else
 		{
-			llinfos << "PromptShowFile invalid parameters! Expecting \"ALERT,FILE\"." << llendl;
+			LL_INFOS() << "PromptShowFile invalid parameters! Expecting \"ALERT,FILE\"." << LL_ENDL;
 		}
 		return true;
 	}
@@ -6363,7 +6363,7 @@ class LLShowAgentProfile : public view_listener_t
 		LLVOAvatar* avatar = find_avatar_from_object(agent_id);
 //		if (avatar)
 // [RLVa:KB] - Checked: 2010-06-04 (RLVa-1.2.0d) | Modified: RLVa-1.2.0d
-		if ( (avatar) && ((!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)) || (gAgent.getID() == agent_id)) )
+		if ( (avatar) && ((!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)) || (gAgent.getID() == agent_id)) )
 // [/RLVa:KB]
 		{
 			LLAvatarActions::showProfile(avatar->getID());
@@ -6574,7 +6574,7 @@ void callback_attachment_drop(const LLSD& notification, const LLSD& response)
 	
 	if (!object)
 	{
-		llwarns << "handle_drop_attachment() - no object to drop" << llendl;
+		LL_WARNS() << "handle_drop_attachment() - no object to drop" << LL_ENDL;
 		return;
 	}
 
@@ -6591,13 +6591,13 @@ void callback_attachment_drop(const LLSD& notification, const LLSD& response)
 
 	if (!object)
 	{
-		llwarns << "handle_detach() - no object to detach" << llendl;
+		LL_WARNS() << "handle_detach() - no object to detach" << LL_ENDL;
 		return;
 	}
 
 	if (object->isAvatar())
 	{
-		llwarns << "Trying to detach avatar from avatar." << llendl;
+		LL_WARNS() << "Trying to detach avatar from avatar." << LL_ENDL;
 		return;
 	}
 	
@@ -6640,7 +6640,7 @@ class LLAttachmentDrop : public view_listener_t
 		}
 		else
 		{
-			llwarns << "Drop object not found" << llendl;
+			LL_WARNS() << "Drop object not found" << LL_ENDL;
 			return true;
 		}
 
@@ -6735,7 +6735,7 @@ class LLAttachmentDetach : public view_listener_t
 		LLViewerObject *object = LLSelectMgr::getInstance()->getSelection()->getPrimaryObject();
 		if (!object)
 		{
-			llwarns << "handle_detach() - no object to detach" << llendl;
+			LL_WARNS() << "handle_detach() - no object to detach" << LL_ENDL;
 			return true;
 		}
 
@@ -6752,13 +6752,13 @@ class LLAttachmentDetach : public view_listener_t
 
 		if (!object)
 		{
-			llwarns << "handle_detach() - no object to detach" << llendl;
+			LL_WARNS() << "handle_detach() - no object to detach" << LL_ENDL;
 			return true;
 		}
 
 		if (object->isAvatar())
 		{
-			llwarns << "Trying to detach avatar from avatar." << llendl;
+			LL_WARNS() << "Trying to detach avatar from avatar." << LL_ENDL;
 			return true;
 		}
 
@@ -7019,7 +7019,7 @@ class LLAvatarSendIM : public view_listener_t
 		LLVOAvatar* avatar = find_avatar_from_object( LLSelectMgr::getInstance()->getSelection()->getPrimaryObject() );
 //		if(avatar)
 // [RLVa:KB] - Checked: 2010-06-04 (RLVa-1.2.0d) | Added: RLVa-1.2.0d
-		if ((avatar) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES)))
+		if ((avatar) && (!gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMES) && !gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS)))
 // [/RLVa:KB]
 		{
 			LLAvatarActions::startIM(avatar->getID());
@@ -7074,14 +7074,14 @@ void queue_actions(LLFloaterScriptQueue* q, const std::string& msg)
 		}
 		else
 		{
-			llerrs << "Bad logic." << llendl;
+			LL_ERRS() << "Bad logic." << LL_ENDL;
 		}
 	}
 	else
 	{
 		if (!q->start())
 		{
-			llwarns << "Unexpected script compile failure." << llendl;
+			LL_WARNS() << "Unexpected script compile failure." << LL_ENDL;
 		}
 	}
 }
@@ -7135,7 +7135,7 @@ class LLToolsSelectedScriptAction : public view_listener_t
 		}
 		else
 		{
-			llwarns << "Failed to generate LLFloaterScriptQueue with action: " << action << llendl;
+			LL_WARNS() << "Failed to generate LLFloaterScriptQueue with action: " << action << LL_ENDL;
 		}
 		return true;
 	}
@@ -7251,7 +7251,7 @@ void handle_toggle_pg(void*)
 
 	LLFloaterWorldMap::reloadIcons(NULL);
 
-	llinfos << "PG status set to " << gAgent.isTeen() << llendl;
+	LL_INFOS() << "PG status set to " << gAgent.isTeen() << LL_ENDL;
 }
 
 void handle_dump_attachments(void*)
@@ -7274,12 +7274,12 @@ void handle_dump_attachments(void*)
 							!attached_object->mDrawable->isRenderType(0));
 			LLVector3 pos;
 			if (visible) pos = attached_object->mDrawable->getPosition();
-			llinfos << "ATTACHMENT " << key << ": item_id=" << attached_object->getAttachmentItemID()
+			LL_INFOS() << "ATTACHMENT " << key << ": item_id=" << attached_object->getAttachmentItemID()
 					<< (attached_object ? " present " : " absent ")
 					<< (visible ? "visible " : "invisible ")
 					<<  " at " << pos
 					<< " and " << (visible ? attached_object->getPosition() : LLVector3::zero)
-					<< llendl;
+					<< LL_ENDL;
 		}
 	}
 }
@@ -7325,6 +7325,16 @@ class LLToggleControl : public view_listener_t
 	bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
 	{
 		LLControlVariable* control(gSavedSettings.getControl(userdata.asString()));
+		control->set(!control->get());
+		return true;
+	}
+};
+
+class LLTogglePerAccountControl : public view_listener_t
+{
+	bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
+	{
+		LLControlVariable* control(gSavedPerAccountSettings.getControl(userdata.asString()));
 		control->set(!control->get());
 		return true;
 	}
@@ -7811,7 +7821,7 @@ class LLToolsEditLinkedParts : public view_listener_t
 
 void reload_personal_settings_overrides(void *)
 {
-	llinfos << "Loading overrides from " << gDirUtilp->getExpandedFilename(LL_PATH_PER_SL_ACCOUNT,"overrides.xml") << llendl;
+	LL_INFOS() << "Loading overrides from " << gDirUtilp->getExpandedFilename(LL_PATH_PER_SL_ACCOUNT,"overrides.xml") << LL_ENDL;
 	
 	gSavedSettings.loadFromFile(gDirUtilp->getExpandedFilename(LL_PATH_PER_SL_ACCOUNT,"overrides.xml"));
 }
@@ -7954,7 +7964,7 @@ void handle_mesh_save_llm(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
@@ -7967,14 +7977,14 @@ static void handle_mesh_save_llm_continued(void* data, AIFilePicker* filepicker)
 {
 	if (!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMeshSharedData* mesh_shared = (LLPolyMeshSharedData*) data;
 	std::string const* mesh_name = LLPolyMesh::getSharedMeshName(mesh_shared);
 
-	llinfos << "Selected " << selected_filename << " for mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Selected " << selected_filename << " for mesh " << *mesh_name <<LL_ENDL;
 
 	std::string bak_filename = selected_filename + ".bak";
 
@@ -7991,7 +8001,7 @@ static void handle_mesh_save_llm_continued(void* data, AIFilePicker* filepicker)
 		// The selected file exists, but there is no backup yet, so make one.
 		if (LLFile::rename(selected_filename, bak_filename) != 0 )
 		{
-			llerrs << "can't rename: " << selected_filename << llendl;
+			LL_ERRS() << "can't rename: " << selected_filename << LL_ENDL;
 			return;
 		}
 	}
@@ -7999,7 +8009,7 @@ static void handle_mesh_save_llm_continued(void* data, AIFilePicker* filepicker)
 	LLFILE* fp = LLFile::fopen(selected_filename, "wb");
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 
 		if ((LLFile::stat(bak_filename, &stat_bak) == 0)
 		&&  (LLFile::stat(selected_filename, &stat_selected) != 0) )
@@ -8007,7 +8017,7 @@ static void handle_mesh_save_llm_continued(void* data, AIFilePicker* filepicker)
 			// Rename the backup to its original name
 			if (LLFile::rename(bak_filename, selected_filename) != 0 )
 			{
-				llerrs << "can't rename: " << bak_filename << " back to " << selected_filename << llendl;
+				LL_ERRS() << "can't rename: " << bak_filename << " back to " << selected_filename << LL_ENDL;
 				return;
 			}
 		}
@@ -8027,7 +8037,7 @@ void handle_mesh_save_current_obj(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
@@ -8043,19 +8053,19 @@ static void handle_mesh_save_current_obj_continued(void* data, AIFilePicker* fil
 {
 	if(!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMeshSharedData* mesh_shared = (LLPolyMeshSharedData*)data;
 	std::string const* mesh_name = LLPolyMesh::getSharedMeshName(mesh_shared);
 
-	llinfos << "Selected " << selected_filename << " for mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Selected " << selected_filename << " for mesh " << *mesh_name <<LL_ENDL;
 
 	LLFILE* fp = LLFile::fopen(selected_filename, "wb");			/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		return;
 	}
 
@@ -8076,7 +8086,7 @@ void handle_mesh_save_obj(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
@@ -8092,19 +8102,19 @@ static void handle_mesh_save_obj_continued(void* data, AIFilePicker* filepicker)
 {
 	if(!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMeshSharedData* mesh_shared = (LLPolyMeshSharedData*) data;
 	std::string const* mesh_name = LLPolyMesh::getSharedMeshName(mesh_shared);
 
-	llinfos << "Selected " << selected_filename << " for mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Selected " << selected_filename << " for mesh " << *mesh_name <<LL_ENDL;
 
 	LLFILE* fp = LLFile::fopen(selected_filename, "wb");			/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		return;
 	}
 
@@ -8122,7 +8132,7 @@ void handle_mesh_load_obj(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
@@ -8135,19 +8145,19 @@ static void handle_mesh_load_obj_continued(void* data, AIFilePicker* filepicker)
 {
 	if(!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMeshSharedData* mesh_shared = (LLPolyMeshSharedData*) data;
 	std::string const* mesh_name = LLPolyMesh::getSharedMeshName(mesh_shared);
 
-	llinfos << "Selected " << selected_filename << " for mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Selected " << selected_filename << " for mesh " << *mesh_name <<LL_ENDL;
 
 	LLFILE* fp = LLFile::fopen(selected_filename, "rb");			/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		return;
 	}
 
@@ -8167,11 +8177,11 @@ void handle_morph_save_obj(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
-	llinfos << "Save morph OBJ " << morph_name << " of mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Save morph OBJ " << morph_name << " of mesh " << *mesh_name <<LL_ENDL;
 
 	std::string file_name = *mesh_name + "." + morph_name + ".obj";
 	std::string default_path = gDirUtilp->getExpandedFilename(LL_PATH_CHARACTER, "");
@@ -8185,18 +8195,18 @@ static void handle_morph_save_obj_continued(void* data, AIFilePicker* filepicker
 {
 	if (!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMorphData* morph_data = (LLPolyMorphData*)data;
 
-	llinfos << "Selected " << selected_filename << llendl;
+	LL_INFOS() << "Selected " << selected_filename << LL_ENDL;
 
 	LLFILE* fp = LLFile::fopen(selected_filename, "wb");			/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		return;
 	}
 
@@ -8215,11 +8225,11 @@ void handle_morph_load_obj(void* data)
 
 	if (!mesh_name)
 	{
-		llwarns << "LPolyMesh::getSharedMeshName returned NULL" << llendl;
+		LL_WARNS() << "LPolyMesh::getSharedMeshName returned NULL" << LL_ENDL;
 		return;
 	}
 
-	llinfos << "Load morph OBJ " << morph_name << " of mesh " << *mesh_name <<llendl;
+	LL_INFOS() << "Load morph OBJ " << morph_name << " of mesh " << *mesh_name <<LL_ENDL;
 
 	AIFilePicker* filepicker = AIFilePicker::create();
 	filepicker->open(FFLOAD_ALL, default_path, "mesh_obj");
@@ -8230,19 +8240,19 @@ static void handle_morph_load_obj_continued(void* data, AIFilePicker* filepicker
 {
 	if(!filepicker->hasFilename())
 	{
-		llwarns << "No file" << llendl;
+		LL_WARNS() << "No file" << LL_ENDL;
 		return;
 	}
 	std::string selected_filename = filepicker->getFilename();
 	LLPolyMorphData* morph_data = (LLPolyMorphData*) data;
 	LLPolyMeshSharedData* mesh_shared = morph_data->mMesh;
 
-	llinfos << "Selected " << selected_filename <<llendl;
+	LL_INFOS() << "Selected " << selected_filename <<LL_ENDL;
 
 	LLFILE* fp = LLFile::fopen(selected_filename, "rb");			/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llerrs << "can't open: " << selected_filename << llendl;
+		LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		return;
 	}
 
@@ -8466,7 +8476,7 @@ void handle_buy_currency_test(void*)
 	replace["[LANGUAGE]"] = LLUI::getLanguage();
 	LLStringUtil::format(url, replace);
 
-	llinfos << "buy currency url " << url << llendl;
+	LL_INFOS() << "buy currency url " << url << LL_ENDL;
 
 	LLFloaterHtmlCurrency* floater = LLFloaterHtmlCurrency::showInstance(url);
 	// Needed so we can use secondlife:///app/floater/self/close SLURLs
@@ -8756,7 +8766,7 @@ class LLWorldEnableEnvSettings : public view_listener_t
 			}
 			else
 			{
-				llwarns << "Unknown item" << llendl;
+				LL_WARNS() << "Unknown item" << LL_ENDL;
 			}
 		}
 		return result;
@@ -9222,9 +9232,10 @@ void initialize_menus()
 		LLZoomer(F32 val, bool mult=true) : mVal(val), mMult(mult) {}
 		bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
 		{
-			F32 new_fov_rad = mMult ? LLViewerCamera::getInstance()->getDefaultFOV() * mVal : mVal;
-			LLViewerCamera::getInstance()->setDefaultFOV(new_fov_rad);
-			gSavedSettings.setF32("CameraAngle", LLViewerCamera::getInstance()->getView()); // setView may have clamped it.
+			LLViewerCamera& inst(LLViewerCamera::instance());
+			F32 new_fov_rad = mMult ? inst.getDefaultFOV() * mVal : mVal;
+			inst.setDefaultFOV(new_fov_rad);
+			gSavedSettings.setF32("CameraAngle", inst.getView()); // setView may have clamped it.
 			return true;
 		}
 	private:
@@ -9453,6 +9464,7 @@ void initialize_menus()
 	addMenu(new LLPromptShowURL(), "PromptShowURL");
 	addMenu(new LLShowAgentProfile(), "ShowAgentProfile");
 	addMenu(new LLToggleControl(), "ToggleControl");
+	addMenu(new LLTogglePerAccountControl(), "TogglePerAccountControl");
 
 	addMenu(new LLGoToObject(), "GoToObject");
 	addMenu(new LLPayObject(), "PayObject");
@@ -9559,13 +9571,13 @@ void region_change()
 	LLViewerRegion* regionp = gAgent.getRegion();
 	if (!regionp) return;
 
-	if (regionp->getFeaturesReceived())
+	if (regionp->simulatorFeaturesReceived())
 	{
 		parse_simulator_features();
 	}
 	else
 	{
-		regionp->setFeaturesReceivedCallback(boost::bind(&parse_simulator_features));
+		regionp->setSimulatorFeaturesReceivedCallback(boost::bind(&parse_simulator_features));
 	}
 }
 

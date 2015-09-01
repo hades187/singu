@@ -62,7 +62,6 @@ enum ACTIVITY_TYPE
 	ACTIVITY_TYPING,         /** Typing */
 	ACTIVITY_NEW,            /** Avatar just appeared */
 	ACTIVITY_SOUND,          /** Playing a sound */
-	ACTIVITY_DEAD            /** Avatar isn't around anymore, and will be removed soon from the list */
 };
 	/**
 	 * @brief Initializes a list entry
@@ -84,18 +83,10 @@ enum ACTIVITY_TYPE
 
 	const LLVector3d& getPosition() const { return mPosition; }
 
-	/**
-	 * @brief Returns the age of this entry in frames
-	 *
-	 * This is only used for determining whether the avatar is still around.
-	 * @see getEntryAgeSeconds
+	/*
+	 * @brief resets the name accordance with RLVa
 	 */
-	bool getAlive() const;
-
-	/**
-	 * @brief Returns the age of this entry in seconds
-	 */
-	F32 getEntryAgeSeconds() const;
+	void resetName(const bool& hide_tags, const bool& anon_names, const std::string& hidden);
 
 	/**
 	 * @brief Returns the name of the avatar
@@ -132,11 +123,6 @@ enum ACTIVITY_TYPE
 	void setInList()	{ mIsInList = true; }
 
 	bool isInList() const { return mIsInList; }
-	/**
-	 * @brief Returns whether the item is dead and shouldn't appear in the list
-	 * @returns true if dead
-	 */
-	bool isDead() const;
 
 	void toggleMark() { mMarked = !mMarked; }
 
@@ -164,20 +150,9 @@ private:
 	 */
 	std::bitset<STAT_TYPE_SIZE> mStats;
 
-	/**
-	 * @brief Timer to keep track of whether avatars are still there
-	 */
-
-	LLTimer mUpdateTimer;
-
 	ACTIVITY_TYPE mActivityType;
 
 	LLTimer mActivityTimer;
-
-	/**
-	 * @brief Last frame when this avatar was updated
-	 */
-	U32 mFrame;
 };
 
 
@@ -211,6 +186,7 @@ public:
 	/*virtual*/ void onOpen();
 	/*virtual*/ BOOL postBuild();
 	/*virtual*/ void draw();
+	/*virtual*/ BOOL handleRightMouseDown(S32 x, S32 y, MASK mask);
 	/**
 	 * @brief Toggles interface visibility
 	 * There is only one instance of the avatar scanner at any time.
@@ -226,12 +202,17 @@ public:
 	/**
 	 * @brief Updates the internal avatar list with the currently present avatars.
 	 */
-	void updateAvatarList();
+	void updateAvatarList(const class LLViewerRegion* region);
 
 	/**
 	 * @brief Refresh avatar list (display)
 	 */
 	void refreshAvatarList();
+
+	/**
+	 * @brief Reset avatar names in accordance with RLVa
+	 */
+	void resetAvatarNames();
 
 	/**
 	 * @brief Returns the entry for an avatar, if preset
@@ -316,7 +297,6 @@ public:
 	void onClickGetKey();
 
 	void onSelectName();
-	void onCommitUpdateRate();
 
 	/**
 	 * @brief These callbacks fire off notifications, which THEN fire the related callback* functions.
@@ -348,7 +328,7 @@ public:
 	 * to keep people passing by in the list long enough that it's possible
 	 * to do something to them.
 	 */
-	void expireAvatarList();
+	void expireAvatarList(const std::list<LLUUID>& ids);
 	void updateAvatarSorting();
 
 private:
@@ -363,11 +343,6 @@ private:
 	 * @brief true when Updating
 	 */
 	const LLCachedControl<bool> mUpdate;
-
-	/**
-	 * @brief Update rate (if min frames per update)
-	 */
-	U32 mUpdateRate;
 
 	// tracking data
 	bool mTracking;			// Tracking ?

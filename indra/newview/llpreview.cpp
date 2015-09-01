@@ -201,10 +201,10 @@ void LLPreview::onCommit()
 		if (!item->isComplete())
 		{
 			// We are attempting to save an item that was never loaded
-			llwarns << "LLPreview::onCommit() called with mIsComplete == FALSE"
+			LL_WARNS() << "LLPreview::onCommit() called with mIsComplete == FALSE"
 					<< " Type: " << item->getType()
 					<< " ID: " << item->getUUID()
-					<< llendl;
+					<< LL_ENDL;
 			return;
 		}
 		
@@ -495,13 +495,6 @@ void LLPreview::onDiscardBtn(void* data)
 	self->mForceClose = TRUE;
 	self->close();
 
-	// Delete the item entirely
-	/*
-	item->removeFromServer();
-	gInventory.deleteObject(item->getUUID());
-	gInventory.notifyObservers();
-	*/
-
 	// Move the item to the trash
 	LLUUID trash_id = gInventory.findCategoryUUIDForType(LLFolderType::FT_TRASH);
 	if (item->getParentUUID() != trash_id)
@@ -646,7 +639,7 @@ void LLPreview::setAssetId(const LLUUID& asset_id)
 		LLViewerObject* object = gObjectList.findObject(mObjectUUID);
 		if(NULL == object)
 		{
-			llwarns << "LLPreview::setAssetId() called on unrecognized object, UUID : " << mObjectUUID << llendl;
+			LL_WARNS() << "LLPreview::setAssetId() called on unrecognized object, UUID : " << mObjectUUID << LL_ENDL;
 			return;
 		}
 		object->updateViewerInventoryAsset(item, asset_id);

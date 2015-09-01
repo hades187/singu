@@ -161,7 +161,7 @@ void LLPanelPlace::resetName(const std::string& name)
 	}
 	if(mNameEditor)
 	{
-		llinfos << "Clearing place name" << llendl;
+		LL_INFOS() << "Clearing place name" << LL_ENDL;
 		mNameEditor->setText( LLStringUtil::null );
 	}
 	if(mInfoEditor)
@@ -221,7 +221,7 @@ void LLPanelPlace::setErrorStatus(U32 status, const std::string& reason)
 	}
 	else
 	{
-		llwarns << "Unexpected error (" << status << "): " << reason << llendl;
+		LL_WARNS() << "Unexpected error (" << status << "): " << reason << LL_ENDL;
 		error_text = llformat("Unexpected Error (%u): %s", status, reason.c_str());
 	}
 	mDescEditor->setText(error_text);
@@ -289,16 +289,16 @@ void LLPanelPlace::processParcelInfo(const LLParcelData& parcel_data)
 	}
 
 	// Just use given region position for display
-	S32 region_x = llmath::llround(mPosRegion.mV[0]);
-	S32 region_y = llmath::llround(mPosRegion.mV[1]);
-	S32 region_z = llmath::llround(mPosRegion.mV[2]);
+	S32 region_x = ll_round(mPosRegion.mV[0]);
+	S32 region_y = ll_round(mPosRegion.mV[1]);
+	S32 region_z = ll_round(mPosRegion.mV[2]);
 
 	// If the region position is zero, grab position from the global
 	if(mPosRegion.isExactlyZero())
 	{
-		region_x = llmath::llround(parcel_data.global_x) % REGION_WIDTH_UNITS;
-		region_y = llmath::llround(parcel_data.global_y) % REGION_WIDTH_UNITS;
-		region_z = llmath::llround(parcel_data.global_z);
+		region_x = ll_round(parcel_data.global_x) % REGION_WIDTH_UNITS;
+		region_y = ll_round(parcel_data.global_y) % REGION_WIDTH_UNITS;
+		region_z = ll_round(parcel_data.global_z);
 	}
 
 	if(mPosGlobal.isExactlyZero())
@@ -419,7 +419,7 @@ bool LLPanelPlace::callbackAuctionWebPage(const LLSD& notification, const LLSD& 
 		S32 auction_id = notification["payload"]["auction_id"].asInteger();
 		url = AUCTION_URL + llformat("%010d", auction_id );
 
-		llinfos << "Loading auction page " << url << llendl;
+		LL_INFOS() << "Loading auction page " << url << LL_ENDL;
 
 		LLWeb::loadURL(url);
 	}

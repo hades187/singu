@@ -64,14 +64,14 @@ namespace
 			if (LLFILE* fp = LLFile::fopen(selected_filename, "wb"))
 			{
 				wfsaver->saveFile(fp);
-				llinfos << "OBJ file saved to " << selected_filename << llendl;
+				LL_INFOS() << "OBJ file saved to " << selected_filename << LL_ENDL;
 				if (gSavedSettings.getBOOL("OBJExportNotifySuccess"))
 					LLNotificationsUtil::add("WavefrontExportSuccess", LLSD().with("FILENAME", selected_filename));
 				fclose(fp);
 			}
-			else llerrs << "can't open: " << selected_filename << llendl;
+			else LL_ERRS() << "can't open: " << selected_filename << LL_ENDL;
 		}
-		else llwarns << "No file; bailing" << llendl;
+		else LL_WARNS() << "No file; bailing" << LL_ENDL;
 
 		delete wfsaver;
 	}
@@ -252,7 +252,7 @@ namespace
 							asset_id_matches);
 
 			// See if any of the inventory items matching this sculpt id are exportable
-			for (S32 i = 0; i < items.count(); i++)
+			for (U32 i = 0; i < items.size(); i++)
 			{
 				const LLPermissions item_permissions = items[i]->getPermissions();
 				if (item_permissions.allowExportBy(gAgentID, LFSimFeatureHandler::instance().exportPolicy()))
@@ -365,9 +365,9 @@ void WavefrontSaver::Add(const LLVOAvatar* av_vo) //adds attachments, too!
 			LLViewerObject* o = *itero;
 			if (!o) continue;
 
-			LLDynamicArray<LLViewerObject*> prims = LLDynamicArray<LLViewerObject*>();
+			std::vector<LLViewerObject*> prims;
 			o->addThisAndAllChildren(prims);
-			for (LLDynamicArray<LLViewerObject*>::iterator iterc = prims.begin(); iterc != prims.end(); ++iterc)
+			for (std::vector<LLViewerObject* >::iterator iterc = prims.begin(); iterc != prims.end(); ++iterc)
 			{
 				const LLViewerObject* c = *iterc;
 				if (!c) continue;
@@ -436,7 +436,7 @@ namespace
 	{
 		const size_t size = outstring.length();
 		if (fwrite(outstring.c_str(), 1, size, fp) != size)
-			llwarns << "Short write" << llendl;
+			LL_WARNS() << "Short write" << LL_ENDL;
 	}
 }
 

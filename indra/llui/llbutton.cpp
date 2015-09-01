@@ -525,7 +525,7 @@ BOOL LLButton::handleHover(S32 x, S32 y, MASK mask)
 
 		// We only handle the click if the click both started and ended within us
 		getWindow()->setCursor(UI_CURSOR_ARROW);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << llendl;
+		LL_DEBUGS("UserInput") << "hover handled by " << getName() << LL_ENDL;
 	}
 	return TRUE;
 }
@@ -536,8 +536,8 @@ void LLButton::getOverlayImageSize(S32& overlay_width, S32& overlay_height)
 	overlay_height = mImageOverlay->getHeight();
 
 	F32 scale_factor = llmin((F32)getRect().getWidth() / (F32)overlay_width, (F32)getRect().getHeight() / (F32)overlay_height, 1.f);
-	overlay_width = llmath::llround((F32)overlay_width * scale_factor);
-	overlay_height = llmath::llround((F32)overlay_height * scale_factor);
+	overlay_width = ll_round((F32)overlay_width * scale_factor);
+	overlay_height = ll_round((F32)overlay_height * scale_factor);
 }
 
 
@@ -696,7 +696,7 @@ void LLButton::draw()
 	if (hasFocus())
 	{
 		F32 lerp_amt = gFocusMgr.getFocusFlashAmt();
-		drawBorder(imagep, gFocusMgr.getFocusColor() % alpha, llmath::llround(lerp(1.f, 3.f, lerp_amt)));
+		drawBorder(imagep, gFocusMgr.getFocusColor() % alpha, ll_round(lerp(1.f, 3.f, lerp_amt)));
 	}
 	
 	if (use_glow_effect)
@@ -741,7 +741,7 @@ void LLButton::draw()
 	else
 	{
 		// no image
-		lldebugs << "No image for button " << getName() << llendl;
+		LL_DEBUGS() << "No image for button " << getName() << LL_ENDL;
 		// draw it in pink so we can find it
 		gl_rect_2d(0, getRect().getHeight(), getRect().getWidth(), 0, LLColor4::pink1 % alpha, FALSE);
 	}
@@ -958,7 +958,7 @@ void LLButton::setImageUnselected(LLPointer<LLUIImage> image)
 	mImageUnselected = image;
 	if (mImageUnselected.isNull())
 	{
-		llwarns << "Setting default button image for: " << getName() << " to NULL" << llendl;
+		LL_WARNS() << "Setting default button image for: " << getName() << " to NULL" << LL_ENDL;
 	}
 }
 
@@ -981,7 +981,7 @@ void LLButton::resize(LLUIString label)
 		{
 			S32 overlay_width = mImageOverlay->getWidth();
 			F32 scale_factor = (getRect().getHeight() - (mImageOverlayBottomPad + mImageOverlayTopPad)) / (F32)mImageOverlay->getHeight();
-			overlay_width = llmath::llround((F32)overlay_width * scale_factor);
+			overlay_width = ll_round((F32)overlay_width * scale_factor);
 
 			switch(mImageOverlayAlignment)
 			{

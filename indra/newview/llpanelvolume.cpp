@@ -512,51 +512,6 @@ void LLPanelVolume::draw()
 	LLPanel::draw();
 }
 
-// virtual
-void LLPanelVolume::clearCtrls()
-{
-	LLPanel::clearCtrls();
-
-	getChildView("select_single")->setEnabled(false);
-	getChildView("select_single")->setVisible(true);
-	getChildView("edit_object")->setEnabled(false);
-	getChildView("edit_object")->setVisible(false);
-	getChildView("Light Checkbox Ctrl")->setEnabled(false);
-	getChildView("label color")->setEnabled(false);
-	LLColorSwatchCtrl* LightColorSwatch = getChild<LLColorSwatchCtrl>("colorswatch");
-	if(LightColorSwatch)
-	{
-		LightColorSwatch->setEnabled( FALSE );
-		LightColorSwatch->setValid( FALSE );
-	}
-	childSetEnabled("label texture",false);
-	LLTextureCtrl* LightTextureCtrl = getChild<LLTextureCtrl>("light texture control");
-	if(LightTextureCtrl)
-	{
-		LightTextureCtrl->setEnabled( FALSE );
-		LightTextureCtrl->setValid( FALSE );
-	}
-
-	getChildView("Light Intensity")->setEnabled(false);
-	getChildView("Light Radius")->setEnabled(false);
-	getChildView("Light Falloff")->setEnabled(false);
-
-	getChildView("Flexible1D Checkbox Ctrl")->setEnabled(false);
-	getChildView("FlexNumSections")->setEnabled(false);
-	getChildView("FlexGravity")->setEnabled(false);
-	getChildView("FlexTension")->setEnabled(false);
-	getChildView("FlexFriction")->setEnabled(false);
-	getChildView("FlexWind")->setEnabled(false);
-	getChildView("FlexForceX")->setEnabled(false);
-	getChildView("FlexForceY")->setEnabled(false);
-	getChildView("FlexForceZ")->setEnabled(false);
-
-	mSpinPhysicsGravity->setEnabled(FALSE);
-	mSpinPhysicsFriction->setEnabled(FALSE);
-	mSpinPhysicsDensity->setEnabled(FALSE);
-	mSpinPhysicsRestitution->setEnabled(FALSE);
-}
-
 //
 // Static functions
 //
@@ -572,7 +527,7 @@ void LLPanelVolume::sendIsLight()
 	
 	BOOL value = getChild<LLUICtrl>("Light Checkbox Ctrl")->getValue();
 	volobjp->setIsLight(value);
-	llinfos << "update light sent" << llendl;
+	LL_INFOS() << "update light sent" << LL_ENDL;
 }
 
 void LLPanelVolume::sendIsFlexible()
@@ -604,7 +559,7 @@ void LLPanelVolume::sendIsFlexible()
 		LLSelectMgr::getInstance()->selectionUpdatePhantom(volobjp->flagPhantom());
 	}
 
-	llinfos << "update flexible sent" << llendl;
+	LL_INFOS() << "update flexible sent" << LL_ENDL;
 }
 
 void LLPanelVolume::sendPhysicsShapeType(LLUICtrl* ctrl, void* userdata)

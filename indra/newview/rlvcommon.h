@@ -57,7 +57,7 @@ typedef std::list<RlvCommand> rlv_command_list_t;
 class RlvObject;
 
 struct RlvException;
-typedef boost::variant<std::string, LLUUID, S32, ERlvBehaviour> RlvExceptionOption;
+typedef boost::variant<std::string, LLUUID, S32, F32, LLColor3, ERlvBehaviour> RlvExceptionOption;
 
 class RlvGCTimer;
 
@@ -243,7 +243,9 @@ protected:
 
 bool rlvPredCanWearItem(const LLViewerInventoryItem* pItem, ERlvWearMask eWearMask);
 bool rlvPredCanNotWearItem(const LLViewerInventoryItem* pItem, ERlvWearMask eWearMask);
+bool rlvPredCanRemoveItem(const LLUUID& idItem);
 bool rlvPredCanRemoveItem(const LLViewerInventoryItem* pItem);
+bool rlvPredCanNotRemoveItem(const LLUUID& idItem);
 bool rlvPredCanNotRemoveItem(const LLViewerInventoryItem* pItem);
 
 struct RlvPredCanWearItem

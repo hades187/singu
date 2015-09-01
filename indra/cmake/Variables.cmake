@@ -172,7 +172,7 @@ endif(WINDOWS AND WORD_SIZE EQUAL 32)
 # Default deploy grid
 set(GRID agni CACHE STRING "Target Grid")
 
-set(VIEWER_CHANNEL "Singularity" CACHE STRING "Viewer Channel Name")
+set(VIEWER_CHANNEL "Redshift" CACHE STRING "Viewer Channel Name")
 set(VIEWER_LOGIN_CHANNEL "${VIEWER_CHANNEL}" CACHE STRING "Fake login channel for A/B Testing")
 set(VIEWER_BRANDING_ID "singularity" CACHE STRING "Viewer branding id (currently secondlife|snowglobe)")
 

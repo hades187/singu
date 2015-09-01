@@ -57,16 +57,14 @@
 // Don't define PLATFORM_STRING for unknown platforms - they need
 // to get added to the login cgi script, so we want this to cause an
 // error if we get compiled for a different platform.
-// *FIX: This is misreporting on linux. Change this so that linux is
-// in fact reporting linux.
-#if LL_WINDOWS || LL_LINUX  
-static const char* PLATFORM_STRING = "Win";
+#if LL_WINDOWS
+static const char* PLATFORM_STRING = "win";
 #elif LL_DARWIN
-static const char* PLATFORM_STRING = "Mac";
+static const char* PLATFORM_STRING = "mac";
 #elif LL_LINUX
-static const char* PLATFORM_STRING = "Lnx";
+static const char* PLATFORM_STRING = "lnx";
 #elif LL_SOLARIS
-static const char* PLATFORM_STRING = "Sol";
+static const char* PLATFORM_STRING = "sol";
 #else
 #error("Unknown platform defined!")
 #endif
@@ -106,7 +104,7 @@ void LLUserAuth::authenticate(
 	const std::string& hashed_mac,
 	const std::string& hashed_volume_serial)
 {
-	LL_INFOS2("AppInit", "Authentication") << "Authenticating: " << firstname << " " << lastname << ", "
+	LL_INFOS("AppInit", "Authentication") << "Authenticating: " << firstname << " " << lastname << ", "
 			<< /*dpasswd.c_str() <<*/ LL_ENDL;
 	std::ostringstream option_str;
 	option_str << "Options: ";
@@ -114,7 +112,7 @@ void LLUserAuth::authenticate(
 	std::copy(requested_options.begin(), requested_options.end(), appender);
 	option_str << "END";
 	
-	LL_INFOS2("AppInit", "Authentication") << option_str.str() << LL_ENDL;
+	LL_INFOS("AppInit", "Authentication") << option_str.str() << LL_ENDL;
 
 	mAuthResponse = E_NO_RESPONSE_YET;
 	//mDownloadTimer.reset();
@@ -133,6 +131,7 @@ void LLUserAuth::authenticate(
 	XMLRPC_VectorAppendString(params, "version", gCurrentVersion.c_str(), 0); // Includes channel name
 	XMLRPC_VectorAppendString(params, "channel", gVersionChannel, 0);
 	XMLRPC_VectorAppendString(params, "platform", PLATFORM_STRING, 0);
+	XMLRPC_VectorAppendString(params, "platform_version", LLAppViewer::instance()->getOSInfo().getOSVersionString().c_str(), 0);
 
 	XMLRPC_VectorAppendString(params, "mac", hashed_mac.c_str(), 0);
 	// A bit of security through obscurity: id0 is volume_serial
@@ -168,7 +167,7 @@ void LLUserAuth::authenticate(
 	mResponder = new XMLRPCResponder;
 	LLHTTPClient::postXMLRPC(auth_uri, request, mResponder);
 
-	LL_INFOS2("AppInit", "Authentication") << "LLUserAuth::authenticate: uri=" << auth_uri << LL_ENDL;
+	LL_INFOS("AppInit", "Authentication") << "LLUserAuth::authenticate: uri=" << auth_uri << LL_ENDL;
 }
 
 
@@ -192,7 +191,7 @@ void LLUserAuth::authenticate(
 {
 	std::string dpasswd("$1$");
 	dpasswd.append(passwd);
-	LL_INFOS2("AppInit", "Authentication") << "Authenticating: " << firstname << " " << lastname << ", "
+	LL_INFOS("AppInit", "Authentication") << "Authenticating: " << firstname << " " << lastname << ", "
 			<< /*dpasswd.c_str() <<*/ LL_ENDL;
 	std::ostringstream option_str;
 	option_str << "Options: ";
@@ -200,7 +199,7 @@ void LLUserAuth::authenticate(
 	std::copy(requested_options.begin(), requested_options.end(), appender);
 	option_str << "END";
 
-	LL_INFOS2("AppInit", "Authentication") << option_str.str().c_str() << LL_ENDL;
+	LL_INFOS("AppInit", "Authentication") << option_str.str().c_str() << LL_ENDL;
 
 	mAuthResponse = E_NO_RESPONSE_YET;
 	//mDownloadTimer.reset();
@@ -232,6 +231,7 @@ void LLUserAuth::authenticate(
 #endif
 	XMLRPC_VectorAppendString(params, "channel", chan.c_str(), 0);
 	XMLRPC_VectorAppendString(params, "platform", PLATFORM_STRING, 0);
+	XMLRPC_VectorAppendString(params, "platform_version", LLAppViewer::instance()->getOSInfo().getOSVersionString().c_str(), 0);
 
 	XMLRPC_VectorAppendString(params, "mac", hashed_mac.c_str(), 0);
 	// A bit of security through obscurity: id0 is volume_serial
@@ -270,7 +270,7 @@ void LLUserAuth::authenticate(
 	mResponder = new XMLRPCResponder;
 	LLHTTPClient::postXMLRPC(auth_uri, request, mResponder);
 	
-	LL_INFOS2("AppInit", "Authentication") << "LLUserAuth::authenticate: uri=" << auth_uri << LL_ENDL;
+	LL_INFOS("AppInit", "Authentication") << "LLUserAuth::authenticate: uri=" << auth_uri << LL_ENDL;
 }
 
 
@@ -324,7 +324,7 @@ LLUserAuth::UserAuthcode LLUserAuth::authResponse()
 		break;
 	}
 
-	LL_INFOS2("AppInit", "Authentication") << "Processed response: " << result << LL_ENDL;
+	LL_INFOS("AppInit", "Authentication") << "Processed response: " << result << LL_ENDL;
 
 	// We're done with this data.
 	mResponder = NULL;
@@ -358,7 +358,7 @@ LLUserAuth::UserAuthcode LLUserAuth::parseResponse()
     XMLRPC_VALUE param = XMLRPC_RequestGetData(response);
     if (! param)
 	{
-		lldebugs << "Response contains no data" << LL_ENDL;
+		LL_DEBUGS() << "Response contains no data" << LL_ENDL;
 		return rv;
 	}
 
@@ -375,24 +375,24 @@ LLSD LLUserAuth::parseValues(UserAuthcode &auth_code, const std::string& key_pfx
 		current = XMLRPC_VectorNext(param))
 	{
 		std::string key(XMLRPC_GetValueID(current));
-		lldebugs << "key: " << key_pfx << key << llendl;
+		LL_DEBUGS() << "key: " << key_pfx << key << LL_ENDL;
 		XMLRPC_VALUE_TYPE_EASY type = XMLRPC_GetValueTypeEasy(current);
 		if(xmlrpc_type_string == type)
 		{
 			LLSD::String val(XMLRPC_GetValueString(current));
-			lldebugs << "val: " << val << llendl;
+			LL_DEBUGS() << "val: " << val << LL_ENDL;
 			responses.insert(key,val);
 		}
 		else if(xmlrpc_type_int == type)
 		{
 			LLSD::Integer val(XMLRPC_GetValueInt(current));
-			lldebugs << "val: " << val << llendl;
+			LL_DEBUGS() << "val: " << val << LL_ENDL;
 			responses.insert(key,val);
 		}
 		else if (xmlrpc_type_double == type)
         {
 			LLSD::Real val(XMLRPC_GetValueDouble(current));
-            lldebugs << "val: " << val << llendl;
+            LL_DEBUGS() << "val: " << val << LL_ENDL;
 			responses.insert(key,val);
 		}
 		else if(xmlrpc_type_array == type)
@@ -429,7 +429,7 @@ LLSD LLUserAuth::parseValues(UserAuthcode &auth_code, const std::string& key_pfx
         else
         {
         	// whoops - unrecognized type
-            llwarns << "Unhandled xmlrpc type " << type << " for key "
+            LL_WARNS() << "Unhandled xmlrpc type " << type << " for key "
                                         << key_pfx << key << LL_ENDL;
             responses.insert(key, STRINGIZE("<bad XMLRPC type " << type << '>'));
             auth_code = E_UNHANDLED_ERROR;

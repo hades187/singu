@@ -146,7 +146,7 @@ LLScrollContainer::~LLScrollContainer( void )
 // virtual
 void LLScrollContainer::scrollHorizontal( S32 new_pos )
 {
-	//llinfos << "LLScrollContainer::scrollHorizontal()" << llendl;
+	//LL_INFOS() << "LLScrollContainer::scrollHorizontal()" << LL_ENDL;
 	if( mScrolledView )
 	{
 		LLRect doc_rect = mScrolledView->getRect();
@@ -158,7 +158,7 @@ void LLScrollContainer::scrollHorizontal( S32 new_pos )
 // virtual
 void LLScrollContainer::scrollVertical( S32 new_pos )
 {
-	// llinfos << "LLScrollContainer::scrollVertical() " << new_pos << llendl;
+	// LL_INFOS() << "LLScrollContainer::scrollVertical() " << new_pos << LL_ENDL;
 	if( mScrolledView )
 	{
 		LLRect doc_rect = mScrolledView->getRect();
@@ -299,7 +299,7 @@ bool LLScrollContainer::autoScroll(S32 x, S32 y)
 		// clip rect against root view
 		inner_rect_local.intersectWith(screen_local_extents);
 
-		S32 auto_scroll_speed = llmath::llround(mAutoScrollRate * LLFrameTimer::getFrameDeltaTimeF32());
+		S32 auto_scroll_speed = ll_round(mAutoScrollRate * LLFrameTimer::getFrameDeltaTimeF32());
 		// autoscroll region should take up no more than one third of visible scroller area
 		S32 auto_scroll_region_width = llmin(inner_rect_local.getWidth() / 3, 10); 
 		S32 auto_scroll_region_height = llmin(inner_rect_local.getHeight() / 3, 10); 
@@ -648,7 +648,7 @@ void LLScrollContainer::scrollToShowRect(const LLRect& rect, const LLRect& const
 {
 	if (!mScrolledView)
 	{
-		llwarns << "LLScrollContainer::scrollToShowRect with no view!" << llendl;
+		LL_WARNS() << "LLScrollContainer::scrollToShowRect with no view!" << LL_ENDL;
 		return;
 	}
 
@@ -786,7 +786,7 @@ LLView* LLScrollContainer::fromXML(LLXMLNodePtr node, LLView *parent, LLUICtrlFa
 		{
 			if (panelp)
 			{
-				llinfos << "Warning! Attempting to put multiple panels into a scrollable container view!" << llendl;
+				LL_INFOS() << "Warning! Attempting to put multiple panels into a scrollable container view!" << LL_ENDL;
 				delete control;
 			}
 			else

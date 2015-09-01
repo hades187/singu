@@ -226,11 +226,11 @@ BOOL LLManip::handleHover(S32 x, S32 y, MASK mask)
 			setMouseCapture( FALSE );
 		}
 
-		lldebugst(LLERR_USER_INPUT) << "hover handled by LLManip (active)" << llendl;
+		LL_DEBUGS("UserInput") << "hover handled by LLManip (active)" << LL_ENDL;
 	}
 	else
 	{
-		lldebugst(LLERR_USER_INPUT) << "hover handled by LLManip (inactive)" << llendl;
+		LL_DEBUGS("UserInput") << "hover handled by LLManip (inactive)" << LL_ENDL;
 	}
 	gViewerWindow->setCursor(UI_CURSOR_ARROW);
 	return TRUE;
@@ -538,8 +538,8 @@ void LLManip::renderTickValue(const LLVector3& pos, F32 value, const std::string
 
 	std::string val_string;
 	std::string fraction_string;
-	F32 val_to_print = llmath::llround(value, 0.001f);
-	S32 fractional_portion = llmath::llround(fmodf(llabs(val_to_print), 1.f) * 100.f);
+	F32 val_to_print = ll_round(value, 0.001f);
+	S32 fractional_portion = ll_round(fmodf(llabs(val_to_print), 1.f) * 100.f);
 	if (val_to_print < 0.f)
 	{
 		if (fractional_portion == 0)

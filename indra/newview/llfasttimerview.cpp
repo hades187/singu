@@ -256,7 +256,7 @@ BOOL LLFastTimerView::handleHover(S32 x, S32 y, MASK mask)
 	if (hasMouseCapture())
 	{
 		F32 lerp = llclamp(1.f - (F32) (x - mGraphRect.mLeft) / (F32) mGraphRect.getWidth(), 0.f, 1.f);
-		mScrollIndex = llmath::llround( lerp * (F32)(LLFastTimer::NamedTimer::HISTORY_NUM - MAX_VISIBLE_HISTORY));
+		mScrollIndex = ll_round( lerp * (F32)(LLFastTimer::NamedTimer::HISTORY_NUM - MAX_VISIBLE_HISTORY));
 		mScrollIndex = llclamp(	mScrollIndex, 0, LLFastTimer::getLastFrameIndex());
 		return TRUE;
 	}
@@ -298,9 +298,9 @@ BOOL LLFastTimerView::handleHover(S32 x, S32 y, MASK mask)
 				}
 
 				mToolTipRect.set(mBarStart[mHoverBarIndex][i], 
-					mBarRect.mBottom + llmath::llround(((F32)(MAX_VISIBLE_HISTORY - mHoverBarIndex + 1)) * ((F32)mBarRect.getHeight() / ((F32)MAX_VISIBLE_HISTORY + 2.f))),
+					mBarRect.mBottom + ll_round(((F32)(MAX_VISIBLE_HISTORY - mHoverBarIndex + 1)) * ((F32)mBarRect.getHeight() / ((F32)MAX_VISIBLE_HISTORY + 2.f))),
 					mBarEnd[mHoverBarIndex][i],
-					mBarRect.mBottom + llmath::llround((F32)(MAX_VISIBLE_HISTORY - mHoverBarIndex) * ((F32)mBarRect.getHeight() / ((F32)MAX_VISIBLE_HISTORY + 2.f))));
+					mBarRect.mBottom + ll_round((F32)(MAX_VISIBLE_HISTORY - mHoverBarIndex) * ((F32)mBarRect.getHeight() / ((F32)MAX_VISIBLE_HISTORY + 2.f))));
 			}
 
 			if ((*it)->getCollapsed())
@@ -432,7 +432,7 @@ void LLFastTimerView::draw()
 	
 	mAverageCyclesPerTimer = LLFastTimer::sTimerCalls == 0 
 		? 0 
-		: llmath::llround(lerp((F32)mAverageCyclesPerTimer, (F32)(LLFastTimer::sTimerCycles / (U64)LLFastTimer::sTimerCalls), 0.1f));
+		: ll_round(lerp((F32)mAverageCyclesPerTimer, (F32)(LLFastTimer::sTimerCycles / (U64)LLFastTimer::sTimerCalls), 0.1f));
 	LLFastTimer::sTimerCycles = 0;
 	LLFastTimer::sTimerCalls = 0;
 
@@ -800,7 +800,7 @@ void LLFastTimerView::draw()
 					? (F32)idp->getCountAverage() / (F32)totalticks 
 					: (F32)idp->getHistoricalCount(tidx) / (F32)totalticks;
 		
-				dx = llmath::llround(frac * (F32)barw);
+				dx = ll_round(frac * (F32)barw);
 				S32 prev_delta_x = deltax.empty() ? 0 : deltax.back();
 				deltax.push_back(dx);
 				
@@ -1073,7 +1073,7 @@ void LLFastTimerView::draw()
 				it.skipDescendants();
 			}
 		}
-		llinfos << legend_stat << llendl;
+		LL_INFOS() << legend_stat << LL_ENDL;
 
 		std::string timer_stat;
 		first = true;
@@ -1107,7 +1107,7 @@ void LLFastTimerView::draw()
 				it.skipDescendants();
 			}
 		}
-		llinfos << timer_stat << llendl;
+		LL_INFOS() << timer_stat << LL_ENDL;
 		mPrintStats = -1;
 	}
 		
@@ -1519,7 +1519,7 @@ void LLFastTimerView::doAnalysisDefault(std::string baseline, std::string target
 	std::ifstream target_is(target.c_str());
 	if (!base_is.is_open() || !target_is.is_open())
 	{
-		llwarns << "'-analyzeperformance' error : baseline or current target file inexistent" << llendl;
+		LL_WARNS() << "'-analyzeperformance' error : baseline or current target file inexistent" << LL_ENDL;
 		base_is.close();
 		target_is.close();
 		return;

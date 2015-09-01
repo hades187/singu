@@ -188,6 +188,8 @@ public:
 	static void     onBtnAdd( void* userdata );
 	static void     onBtnRemove( void* userdata );
 	static void     onBtnBrowser( void* userdata );
+	static void		onBtnCopy( void* userdata );
+	static void		onBtnPaste( void* userdata );
 
 	void			onLocalScrollCommit();
 	// tag: vaa emerald local_asset_browser [end]
@@ -407,7 +409,7 @@ BOOL LLFloaterTexturePicker::handleDragAndDrop(
 	}
 
 	handled = TRUE;
-	lldebugst(LLERR_USER_INPUT) << "dragAndDrop handled by LLFloaterTexturePicker " << getName() << llendl;
+	LL_DEBUGS("UserInput")  << "dragAndDrop handled by LLFloaterTexturePicker " << getName() << LL_ENDL;
 
 	return handled;
 }
@@ -467,14 +469,8 @@ BOOL LLFloaterTexturePicker::postBuild()
 	LLFloater::postBuild();
 	
 	// <dogmode>
-	/**
-	LLInventoryItem* itemp = gInventory.getItem(mImageAssetID);
-	
-	if (itemp && (itemp->getPermissions().getMaskOwner() & PERM_ALL))
-		childSetValue("texture_uuid", mImageAssetID);
-	else
-		childSetValue("texture_uuid", LLUUID::null.asString());
-	**/
+	childSetValue("texture_uuid", mImageAssetID);
+
 	if (!mLabel.empty())
 	{
 		std::string pick = getString("pick title");
@@ -498,6 +494,9 @@ BOOL LLFloaterTexturePicker::postBuild()
 	childSetAction("Add", LLFloaterTexturePicker::onBtnAdd, this);
 	childSetAction("Remove", LLFloaterTexturePicker::onBtnRemove, this);
 	childSetAction("Browser", LLFloaterTexturePicker::onBtnBrowser, this);
+
+	childSetAction("CopyUUID", LLFloaterTexturePicker::onBtnCopy, this);
+	childSetAction("PasteUUID", LLFloaterTexturePicker::onBtnPaste, this);
 
 	mLocalScrollCtrl = getChild<LLScrollListCtrl>("local_name_list");
 	mLocalScrollCtrl->setCommitCallback(boost::bind(&LLFloaterTexturePicker::onLocalScrollCommit, this));
@@ -751,10 +750,10 @@ const LLUUID& LLFloaterTexturePicker::findItemID(const LLUUID& asset_id, BOOL co
 							LLInventoryModel::INCLUDE_TRASH,
 							asset_id_matches);
 
-	if (items.count())
+	if (items.size())
 	{
 		// search for copyable version first
-		for (S32 i = 0; i < items.count(); i++)
+		for (U32 i = 0; i < items.size(); i++)
 		{
 			LLInventoryItem* itemp = items[i];
 			LLPermissions item_permissions = itemp->getPermissions();
@@ -879,6 +878,29 @@ void LLFloaterTexturePicker::onBtnSelect(void* userdata)
 	self->close();
 }
 
+void LLFloaterTexturePicker::onBtnCopy(void* userdata)
+{
+	LLFloaterTexturePicker* self = (LLFloaterTexturePicker*) userdata;
+	gViewerWindow->getWindow()->copyTextToClipboard(utf8str_to_wstring(self->getAssetID().asString()));
+}
+
+void LLFloaterTexturePicker::onBtnPaste(void* userdata)
+{
+	LLFloaterTexturePicker* self = (LLFloaterTexturePicker*) userdata;
+
+	LLWString temp_string;
+	gViewerWindow->getWindow()->pasteTextFromClipboard(temp_string);
+
+	if (!LLUUID::validate(wstring_to_utf8str(temp_string)))
+	{
+		return;
+	}
+
+	LLUUID imageUUID = LLUUID(wstring_to_utf8str(temp_string));
+
+	self->setImageID( imageUUID );
+}
+
 // tag: vaa emerald local_asset_browser [begin]
 
 // static, switches between showing inventory instance for global bitmaps
@@ -988,11 +1010,7 @@ void LLFloaterTexturePicker::onSelectionChange(const std::deque<LLFolderViewItem
 				mTextureSelectedCallback(itemp);
 			}
 			// <dogmode>
-			if (itemp->getPermissions().getMaskOwner() & PERM_ALL)
-				childSetValue("texture_uuid", mImageAssetID);
-			else
-				childSetValue("texture_uuid", LLUUID::null.asString());
-			// </dogmode>
+			childSetValue("texture_uuid", mImageAssetID);
 
 			if (!itemp->getPermissions().allowCopyBy(gAgent.getID()))
 			{
@@ -1110,10 +1128,8 @@ void LLFloaterTexturePicker::onTextureSelect( const LLTextureEntry& te )
 			// no copy texture
 			mNoCopyTextureSelected = TRUE;
 		}
-		else 
-		{
-			childSetValue("texture_uuid", inventory_item_id.asString());
-		}
+
+		childSetValue("texture_uuid", inventory_item_id.asString());
 		
 		commitIfImmediateSet();
 	}
@@ -1167,7 +1183,7 @@ LLTextureCtrl::LLTextureCtrl(
 	S32 image_top = getRect().getHeight();
 	S32 image_bottom = BTN_HEIGHT_SMALL;
 	S32 image_middle = (image_top + image_bottom) / 2;
-	S32 line_height = llmath::llround(LLFontGL::getFontSansSerifSmall()->getLineHeight());
+	S32 line_height = ll_round(LLFontGL::getFontSansSerifSmall()->getLineHeight());
 
 	mTentativeLabel = new LLTextBox( std::string("Multiple"), 
 		LLRect( 
@@ -1492,9 +1508,9 @@ void LLTextureCtrl::onFloaterCommit(ETexturePickOp op)
 		{
 			setTentative( FALSE );
 			mImageItemID = floaterp->findItemID(floaterp->getAssetID(), FALSE);
-			lldebugs << "mImageItemID: " << mImageItemID << llendl;
+			LL_DEBUGS() << "mImageItemID: " << mImageItemID << LL_ENDL;
 			mImageAssetID = floaterp->getAssetID();
-			lldebugs << "mImageAssetID: " << mImageAssetID << llendl;
+			LL_DEBUGS() << "mImageAssetID: " << mImageAssetID << LL_ENDL;
 			if (op == TEXTURE_SELECT && mOnSelectCallback)
 			{
 				mOnSelectCallback( this, LLSD() );
@@ -1604,7 +1620,7 @@ BOOL LLTextureCtrl::handleDragAndDrop(S32 x, S32 y, MASK mask,
 	}
 
 	handled = TRUE;
-	lldebugst(LLERR_USER_INPUT) << "dragAndDrop handled by LLTextureCtrl " << getName() << llendl;
+	LL_DEBUGS("UserInput") << "dragAndDrop handled by LLTextureCtrl " << getName() << LL_ENDL;
 
 	return handled;
 }

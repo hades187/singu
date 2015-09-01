@@ -141,7 +141,7 @@ void LLFloaterEnvSettings::syncMenu()
 		childEnable("EnvUseEstateTimeButton");
 	}
 
-	if(!gPipeline.canUseVertexShaders())
+	if (!LLGLSLShader::sNoFixedFunction)
 	{
 		childDisable("EnvWaterColor");
 		childDisable("EnvWaterColorText");
@@ -316,7 +316,7 @@ std::string LLFloaterEnvSettings::timeToString(F32 curTime)
 	// get hours and minutes
 	hours = (S32) (24.0 * curTime);
 	curTime -= ((F32) hours / 24.0f);
-	min = llmath::llround(24.0f * 60.0f * curTime);
+	min = ll_round(24.0f * 60.0f * curTime);
 
 	// handle case where it's 60
 	if(min == 60) 

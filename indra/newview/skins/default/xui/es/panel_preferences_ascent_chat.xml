@@ -68,6 +68,13 @@
 			<check_box label="Mostrar barra de chat local en ventana flotante (Requiere reiniciar)" tool_tip="Mostrar o no la barra de entrada de texto inferior en la barra flotante de chat." name="show_local_chat_floater_bar"/>
 			<check_box label="Usar botones horizontales para la ventana de contactos (Requiere Reiniciar)" tool_tip="Habilitado, los botones en los paneles de Amigos y Grupos se colocarán en la parte inferior del panel, ordendados horizontalmente, en vez de verticales a la derecha." name="horiz_butt"/>
 			<text name="namesystems_text_box">Formato de nombres en las listas de:</text>
+			<text name="chat_tabs_namesystem_text_box">Pestañas de Chat:</text>
+				<combo_box name="chat_tabs_namesystem_combobox" width="230">
+					<combo_item name="Old Names">Nombres Antiguos</combo_item>
+					<combo_item name="Display Names (with Username)">Nombre a Mostrar (c/Nombre de Usuario)</combo_item>
+					<combo_item name="Display Names only">Solamente Nombre a Mostrar</combo_item>
+					<combo_item name="Old Names (with Display Names)">Nombres Antiguos  (c/Nombre a Mostrar)</combo_item>
+				</combo_box>
 			<text name="friends_namesystem_text_box">Amigos:</text>
 				<combo_box name="friends_namesystem_combobox" width="230">
 					<combo_item name="Old Names">Nombres Antiguos</combo_item>
@@ -132,6 +139,7 @@ Puedes usar los siguientes comodines para personalizar tus respuestas: #n para n
 			<drop_target name="AutoresponseNonFriendsItemID" tool_tip="Arrastra un ítem del Inventario hasta aquí para entregarlo junto con tu respuesta automática."/>
 			<check_box name="AutoresponseMuted" label="Responder a personas que has ignorado" tool_tip="Envía el mensaje de la caja inferior a personas a quienes has ignorado."/>
 			<check_box name="AutoresponseMutedItem" label="Enviar ítem"/>
+			<check_box name="AutoresponseMutedShow" label="Mostrar respuesta enviada"/>
 			<text_editor name="AutoresponseMutedMessage"/>
 			<drop_target name="AutoresponseMutedItemID" tool_tip="Arrastra un ítem del Inventario hasta aquí para entregarlo junto con tu respuesta automática."/>
 			<text name="BusyModeResponseText" tool_tip="Envía el mensaje de la caja inferior a quienes te envían un mensaje estando tu ocupado.">Respuesta en Modo Ocupado:</text>

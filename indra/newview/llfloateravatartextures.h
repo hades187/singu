@@ -54,7 +54,7 @@ public:
 	static LLFloaterAvatarTextures* show(const LLUUID& id);
 
 private:
-	static void onClickDump(void*);
+    static void onClickOpen(void *userdata);
 
 private:
 	LLUUID	mID;

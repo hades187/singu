@@ -648,11 +648,11 @@
     <key>LiruBlockConferences</key>
     <map>
       <key>Comment</key>
-      <string>When true, new incoming conference chats will not be opened.</string>
+      <string>When not zero, new incoming conference chats will not be opened, if 2 only those from nonfriends will be blocked.</string>
       <key>Persist</key>
       <integer>1</integer>
       <key>Type</key>
-      <string>Boolean</string>
+      <string>U32</string>
       <key>Value</key>
       <integer>0</integer>
     </map>
@@ -4219,6 +4219,17 @@ This should be as low as possible, but too low may break functionality</string>
       <key>Value</key>
       <integer>1</integer>
     </map>
+    <key>LetterKeysFocusChatBar</key>
+    <map>
+      <key>Comment</key>
+      <string>When printable characters keys (possibly with Shift held) are pressed, the chatbar takes focus</string>
+      <key>Persist</key>
+      <integer>1</integer>
+      <key>Type</key>
+      <string>Boolean</string>
+      <key>Value</key>
+      <boolean>0</boolean>
+    </map>
     <key>ChatBubbleOpacity</key>
     <map>
       <key>Comment</key>
@@ -7754,17 +7765,6 @@ This should be as low as possible, but too low may break functionality</string>
       <integer>1</integer>
       <key>Type</key>
       <string>Boolean</string>
-      <key>Value</key>
-      <integer>1</integer>
-    </map>
-    <key>RadarUpdateRate</key>
-    <map>
-      <key>Comment</key>
-      <string>Radar update rate (0 = high, 1 = medium, 2 = low)</string>
-      <key>Persist</key>
-      <integer>1</integer>
-      <key>Type</key>
-      <string>U32</string>
       <key>Value</key>
       <integer>1</integer>
     </map>
@@ -18029,6 +18029,17 @@ This should be as low as possible, but too low may break functionality</string>
       <integer>0</integer>
     </map>
     
+    <key>LogInventoryDecline</key>
+    <map>
+      <key>Comment</key>
+      <string>Log in system chat whenever an inventory offer is declined</string>
+      <key>Persist</key>
+      <integer>1</integer>
+      <key>Type</key>
+      <string>Boolean</string>
+      <key>Value</key>
+      <integer>1</integer>
+    </map>
     <key>UseHTTPInventory</key>
     <map>
       <key>Comment</key>
@@ -18521,6 +18532,22 @@ This should be as low as possible, but too low may break functionality</string>
         <integer>0</integer>
       </array>
     </map>    
+    <key>FloaterRegionTrackerRect</key>
+    <map>
+      <key>Comment</key>
+      <string>Rectangle for Region Tracker Floater</string>
+      <key>Persist</key>
+      <integer>1</integer>
+      <key>Type</key>
+      <string>Rect</string>
+      <key>Value</key>
+      <array>
+        <integer>500</integer>
+        <integer>450</integer>
+        <integer>850</integer>
+        <integer>400</integer>
+      </array>
+    </map>
     <key>WindEnabled</key>
     <map>
       <key>Comment</key>
@@ -18745,7 +18772,7 @@ This should be as low as possible, but too low may break functionality</string>
       <key>Type</key>
       <string>U32</string>
       <key>Value</key>
-      <integer>2</integer>
+      <integer>0</integer>
     </map>
   </map>
 </llsd>

@@ -404,10 +404,10 @@ const LLUUID& LLPanelObject::findItemID(const LLUUID& asset_id)
 							LLInventoryModel::INCLUDE_TRASH,
 							asset_id_matches);
 
-	if (items.count())
+	if (items.size())
 	{
 		// search for copyable version first
-		for (S32 i = 0; i < items.count(); i++)
+		for (U32 i = 0; i < items.size(); i++)
 		{
 			LLInventoryItem* itemp = items[i];
 			LLPermissions item_permissions = itemp->getPermissions();
@@ -466,9 +466,9 @@ void LLPanelObject::getState( )
 	}
 
 	// can move or rotate only linked group with move permissions, or sub-object with move and modify perms
-	BOOL enable_move	= objectp->permMove() && !objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced()) && ( (objectp->permModify() && !objectp->isAttachment()) || !gSavedSettings.getBOOL("EditLinkedParts"));
-	BOOL enable_scale	= objectp->permMove() && !objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced()) && objectp->permModify();
-	BOOL enable_rotate	= objectp->permMove() && !objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced()) && ( (objectp->permModify() && !objectp->isAttachment()) || !gSavedSettings.getBOOL("EditLinkedParts"));
+	BOOL enable_move	= /*objectp->permMove() && */!objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced()) && ( (/*objectp->permModify() && */!objectp->isAttachment()) || !gSavedSettings.getBOOL("EditLinkedParts"));
+	BOOL enable_scale	= /*objectp->permMove() && */!objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced())/* && objectp->permModify()*/;
+	BOOL enable_rotate	= /*objectp->permMove() && */!objectp->isPermanentEnforced() && ((root_objectp == NULL) || !root_objectp->isPermanentEnforced()) && ( (/*objectp->permModify() && */!objectp->isAttachment()) || !gSavedSettings.getBOOL("EditLinkedParts"));
 
 	S32 selected_count = LLSelectMgr::getInstance()->getSelection()->getObjectCount();
 	BOOL single_volume = (LLSelectMgr::getInstance()->selectionAllPCode( LL_PCODE_VOLUME ))
@@ -565,9 +565,9 @@ void LLPanelObject::getState( )
 	LLQuaternion object_rot = objectp->getRotationEdit();
 	object_rot.getEulerAngles(&(mCurEulerDegrees.mV[VX]), &(mCurEulerDegrees.mV[VY]), &(mCurEulerDegrees.mV[VZ]));
 	mCurEulerDegrees *= RAD_TO_DEG;
-	mCurEulerDegrees.mV[VX] = fmod(llmath::llround(mCurEulerDegrees.mV[VX], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
-	mCurEulerDegrees.mV[VY] = fmod(llmath::llround(mCurEulerDegrees.mV[VY], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
-	mCurEulerDegrees.mV[VZ] = fmod(llmath::llround(mCurEulerDegrees.mV[VZ], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
+	mCurEulerDegrees.mV[VX] = fmod(ll_round(mCurEulerDegrees.mV[VX], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
+	mCurEulerDegrees.mV[VY] = fmod(ll_round(mCurEulerDegrees.mV[VY], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
+	mCurEulerDegrees.mV[VZ] = fmod(ll_round(mCurEulerDegrees.mV[VZ], OBJECT_ROTATION_PRECISION) + 360.f, 360.f);
 
 	if (enable_rotate)
 	{
@@ -605,7 +605,7 @@ void LLPanelObject::getState( )
 
 	// BUG? Check for all objects being editable?
 	S32 roots_selected = LLSelectMgr::getInstance()->getSelection()->getRootObjectCount();
-	BOOL editable = root_objectp->permModify();
+	BOOL editable = TRUE/*root_objectp->permModify()*/;
 
 	// Select Single Message
 	childSetVisible("select_single", FALSE);
@@ -761,7 +761,7 @@ void LLPanelObject::getState( )
 	{
 		// Only allowed to change these parameters for objects
 		// that you have permissions on AND are not attachments.
-		enabled = root_objectp->permModify() && !root_objectp->isPermanentEnforced();
+		enabled = /*root_objectp->permModify() &&*/ !root_objectp->isPermanentEnforced();
 		
 		// Volume type
 		const LLVolumeParams &volume_params = objectp->getVolume()->getParams();
@@ -890,7 +890,7 @@ void LLPanelObject::getState( )
 		// </edit>
 		else
 		{
-			llinfos << "Unknown path " << (S32) path << " profile " << (S32) profile << " in getState" << llendl;
+			LL_INFOS() << "Unknown path " << (S32) path << " profile " << (S32) profile << " in getState" << LL_ENDL;
 			selected_item = MI_BOX;
 		}
 
@@ -1482,11 +1482,11 @@ void LLPanelObject::sendIsPhysical()
 		LLSelectMgr::getInstance()->selectionUpdatePhysics(value);
 		mIsPhysical = value;
 
-		llinfos << "update physics sent" << llendl;
+		LL_INFOS() << "update physics sent" << LL_ENDL;
 	}
 	else
 	{
-		llinfos << "update physics not changed" << llendl;
+		LL_INFOS() << "update physics not changed" << LL_ENDL;
 	}
 }
 
@@ -1498,11 +1498,11 @@ void LLPanelObject::sendIsTemporary()
 		LLSelectMgr::getInstance()->selectionUpdateTemporary(value);
 		mIsTemporary = value;
 
-		llinfos << "update temporary sent" << llendl;
+		LL_INFOS() << "update temporary sent" << LL_ENDL;
 	}
 	else
 	{
-		llinfos << "update temporary not changed" << llendl;
+		LL_INFOS() << "update temporary not changed" << LL_ENDL;
 	}
 }
 
@@ -1515,11 +1515,11 @@ void LLPanelObject::sendIsPhantom()
 		LLSelectMgr::getInstance()->selectionUpdatePhantom(value);
 		mIsPhantom = value;
 
-		llinfos << "update phantom sent" << llendl;
+		LL_INFOS() << "update phantom sent" << LL_ENDL;
 	}
 	else
 	{
-		llinfos << "update phantom not changed" << llendl;
+		LL_INFOS() << "update phantom not changed" << LL_ENDL;
 	}
 }
 
@@ -1688,8 +1688,8 @@ void LLPanelObject::getVolumeParams(LLVolumeParams& volume_params)
 	// </edit>
 
 	default:
-		llwarns << "Unknown base type " << selected_type 
-			<< " in getVolumeParams()" << llendl;
+		LL_WARNS() << "Unknown base type " << selected_type 
+			<< " in getVolumeParams()" << LL_ENDL;
 		// assume a box
 		selected_type = MI_BOX;
 		profile = LL_PCODE_PROFILE_SQUARE;
@@ -1965,9 +1965,9 @@ void LLPanelObject::sendRotation(BOOL btn_down)
 	if (mObject.isNull()) return;
 
 	LLVector3 new_rot(mCtrlRotX->get(), mCtrlRotY->get(), mCtrlRotZ->get());
-	new_rot.mV[VX] = llmath::llround(new_rot.mV[VX], OBJECT_ROTATION_PRECISION);
-	new_rot.mV[VY] = llmath::llround(new_rot.mV[VY], OBJECT_ROTATION_PRECISION);
-	new_rot.mV[VZ] = llmath::llround(new_rot.mV[VZ], OBJECT_ROTATION_PRECISION);
+	new_rot.mV[VX] = ll_round(new_rot.mV[VX], OBJECT_ROTATION_PRECISION);
+	new_rot.mV[VY] = ll_round(new_rot.mV[VY], OBJECT_ROTATION_PRECISION);
+	new_rot.mV[VZ] = ll_round(new_rot.mV[VZ], OBJECT_ROTATION_PRECISION);
 
 	// Note: must compare before conversion to radians
 	LLVector3 delta = new_rot - mCurEulerDegrees;
@@ -2039,11 +2039,11 @@ void LLPanelObject::sendScale(BOOL btn_down)
 		}
 
 		LLSelectMgr::getInstance()->adjustTexturesByScale(TRUE, !dont_stretch_textures);
-//		llinfos << "scale sent" << llendl;
+//		LL_INFOS() << "scale sent" << LL_ENDL;
 	}
 	else
 	{
-//		llinfos << "scale not changed" << llendl;
+//		LL_INFOS() << "scale not changed" << LL_ENDL;
 	}
 }
 
@@ -2255,47 +2255,6 @@ void LLPanelObject::draw()
 	}
 
 	LLPanel::draw();
-}
-
-// virtual
-void LLPanelObject::clearCtrls()
-{
-	LLPanel::clearCtrls();
-
-	mCheckLock		->set(FALSE);
-	mCheckLock		->setEnabled( FALSE );
-	mCheckPhysics	->set(FALSE);
-	mCheckPhysics	->setEnabled( FALSE );
-	mCheckTemporary	->set(FALSE);
-	mCheckTemporary	->setEnabled( FALSE );
-	mCheckPhantom	->set(FALSE);
-	mCheckPhantom	->setEnabled( FALSE );
-	mComboMaterial	->setEnabled( FALSE );
-	mLabelMaterial	->setEnabled( FALSE );
-	// Disable text labels
-	mLabelPosition	->setEnabled( FALSE );
-	mLabelSize		->setEnabled( FALSE );
-	mLabelRotation	->setEnabled( FALSE );
-	mLabelBaseType	->setEnabled( FALSE );
-	mLabelCut		->setEnabled( FALSE );
-	mLabelHollow	->setEnabled( FALSE );
-	mLabelHoleType	->setEnabled( FALSE );
-	mLabelTwist		->setEnabled( FALSE );
-	mLabelSkew		->setEnabled( FALSE );
-	mLabelShear		->setEnabled( FALSE );
-	mLabelTaper		->setEnabled( FALSE );
-	mLabelRadiusOffset->setEnabled( FALSE );
-	mLabelRevolutions->setEnabled( FALSE );
-
-	childSetVisible("select_single", FALSE);
-	childSetVisible("edit_object", TRUE);	
-	childSetEnabled("edit_object", FALSE);
-	
-	childSetEnabled("scale_hole", FALSE);
-	childSetEnabled("scale_taper", FALSE);
-	childSetEnabled("advanced_cut", FALSE);
-	childSetEnabled("advanced_dimple", FALSE);
-	childSetVisible("advanced_slice", FALSE);
 }
 
 //
@@ -2554,13 +2513,13 @@ void LLPanelObject::onPasteParams(void* user_data)
 
 void LLPanelObject::onLinkObj(void* user_data)
 {
-	llinfos << "Attempting link." << llendl;
+	LL_INFOS() << "Attempting link." << LL_ENDL;
 	LLSelectMgr::getInstance()->linkObjects();
 }
 
 void LLPanelObject::onUnlinkObj(void* user_data)
 {
-	llinfos << "Attempting unlink." << llendl;
+	LL_INFOS() << "Attempting unlink." << LL_ENDL;
 	LLSelectMgr::getInstance()->unlinkObjects();
 }
 

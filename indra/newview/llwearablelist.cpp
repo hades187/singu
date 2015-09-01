@@ -98,7 +98,23 @@ void LLWearableList::processGetAssetReply( const char* filename, const LLAssetID
 {
 	BOOL isNewWearable = FALSE;
 	LLWearableArrivedData* data = (LLWearableArrivedData*) userdata;
-	LLViewerWearable* wearable = NULL; // NULL indicates failure
+//	LLViewerWearable* wearable = NULL; // NULL indicates failure
+// [SL:KB] - Patch: Appearance-Misc | Checked: 2010-08-13 (Catznip-2.1)
+	LLViewerWearable* wearable = get_if_there(LLWearableList::instance().mList, uuid, (LLViewerWearable*)NULL);
+	if (wearable)
+	{
+		LL_DEBUGS("Wearable") << "processGetAssetReply()" << LL_ENDL;
+		LL_DEBUGS("Wearable") << wearable << LL_ENDL;
+
+		if(data->mCallback)
+		{
+			data->mCallback(wearable, data->mUserdata);
+		}
+		delete data;
+
+		return;
+	}
+// [/SL:KB]
 	LLAvatarAppearance *avatarp = data->mAvatarp;
 	
 	if( !filename )
@@ -217,7 +233,7 @@ void LLWearableList::processGetAssetReply( const char* filename, const LLAssetID
 
 LLViewerWearable* LLWearableList::createCopy(const LLViewerWearable* old_wearable, const std::string& new_name, const std::string& new_description)
 {
-	lldebugs << "LLWearableList::createCopy()" << llendl;
+	LL_DEBUGS() << "LLWearableList::createCopy()" << LL_ENDL;
 
 	LLViewerWearable *wearable = generateNewWearable();
 	wearable->copyDataFrom(old_wearable);
@@ -237,7 +253,7 @@ LLViewerWearable* LLWearableList::createCopy(const LLViewerWearable* old_wearabl
 
 LLViewerWearable* LLWearableList::createNewWearable( LLWearableType::EType type, LLAvatarAppearance *avatarp )
 {
-	lldebugs << "LLWearableList::createNewWearable()" << llendl;
+	LL_DEBUGS() << "LLWearableList::createNewWearable()" << LL_ENDL;
 
 	LLViewerWearable *wearable = generateNewWearable();
 	wearable->setType( type, avatarp );

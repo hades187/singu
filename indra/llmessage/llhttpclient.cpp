@@ -110,7 +110,7 @@ class LLSDInjector : public Injector
 class RawInjector : public Injector
 {
   public:
-	RawInjector(char const* data, U32 size) : mData(data), mSize(size) { }
+	RawInjector(U8 const* data, U32 size) : mData(data), mSize(size) { }
 	/*virtual*/ ~RawInjector() { delete [] mData; }
 
 	/*virtual*/ char const* contentType(void) const { return "application/octet-stream"; }
@@ -118,12 +118,12 @@ class RawInjector : public Injector
 	/*virtual*/ U32 get_body(LLChannelDescriptors const& channels, buffer_ptr_t& buffer)
 	{
 		LLBufferStream ostream(channels, buffer.get());
-		ostream.write(mData, mSize);
+		ostream.write((const char*)mData, mSize);
 		ostream << std::flush;			// Always flush a LLBufferStream when done writing to it.
 		return mSize;
 	}
 
-	char const* mData;
+	U8 const* mData;
 	U32 mSize;
 };
 
@@ -229,7 +229,7 @@ void LLHTTPClient::request(
 	}
 	catch(AICurlNoEasyHandle& error)
 	{
-		llwarns << "Failed to create LLURLRequest: " << error.what() << llendl;
+		LL_WARNS() << "Failed to create LLURLRequest: " << error.what() << LL_ENDL;
 		// This is what the old LL code did: no recovery whatsoever (but also no leaks or crash).
 		return ;
 	}
@@ -332,7 +332,7 @@ void LLHTTPClient::ResponderBase::decode_llsd_body(LLChannelDescriptors const& c
 			// Unfortunately we can't show the body of the message... I think this is a pretty serious error
 			// though, so if this ever happens it has to be investigated by making a copy of the buffer
 			// before serializing it, as is done below.
-			llwarns << "Failed to deserialize LLSD. " << mURL << " [" << mStatus << "]: " << mReason << llendl;
+			LL_WARNS() << "Failed to deserialize LLSD. " << mURL << " [" << mStatus << "]: " << mReason << LL_ENDL;
 			AICurlInterface::Stats::llsd_body_parse_error++;
 		}
 		// LLSDSerialize::fromXML destructed buffer, we can't initialize mContent now.
@@ -357,7 +357,7 @@ void LLHTTPClient::ResponderBase::decode_llsd_body(LLChannelDescriptors const& c
 			LLSDSerialize::fromXML(dummy, ss) > 0;
 		if (server_sent_llsd_with_http_error)
 		{
-			llwarns << "The server sent us a response with http status " << mStatus << " and LLSD(!) body: \"" << ss.str() << "\"!" << llendl;
+			LL_WARNS() << "The server sent us a response with http status " << mStatus << " and LLSD(!) body: \"" << ss.str() << "\"!" << LL_ENDL;
 		}
 		// This is not really an error, and it has been known to happen before. It just normally never happens (at the moment)
 		// and therefore warrants an investigation. Linden Lab (or other grids) might start to send error messages
@@ -479,7 +479,7 @@ void LLHTTPClient::ResponderWithResult::finished(CURLcode code, U32 http_status,
 // virtual
 void LLHTTPClient::ResponderWithResult::httpFailure(void)
 {
-  llinfos << mURL << " [" << mStatus << "]: " << mReason << llendl;
+  LL_INFOS() << mURL << " [" << mStatus << "]: " << mReason << LL_ENDL;
 }
 
 // Friend functions.
@@ -622,7 +622,7 @@ static LLSD blocking_request(
 	LLSD const& body/*,*/				// Only used for HTTP_LLSD_POST
 	DEBUG_CURLIO_PARAM(EDebugCurl debug))
 {
-	lldebugs << "blockingRequest of " << url << llendl;
+	LL_DEBUGS() << "blockingRequest of " << url << LL_ENDL;
 
 	AIHTTPHeaders headers;
 	boost::intrusive_ptr<BlockingResponder> responder;
@@ -665,21 +665,21 @@ static LLSD blocking_request(
 		// We expect 404s, don't spam for them.
 		if (http_status != 404)
 		{
-			llwarns << "CURL REQ URL: " << url << llendl;
-			llwarns << "CURL REQ METHOD TYPE: " << method << llendl;
-			llwarns << "CURL REQ HEADERS: " << headers << llendl;
+			LL_WARNS() << "CURL REQ URL: " << url << LL_ENDL;
+			LL_WARNS() << "CURL REQ METHOD TYPE: " << method << LL_ENDL;
+			LL_WARNS() << "CURL REQ HEADERS: " << headers << LL_ENDL;
 			if (method == HTTP_LLSD_POST)
 			{
-				llwarns << "CURL REQ BODY: " << body.asString() << llendl;
+				LL_WARNS() << "CURL REQ BODY: " << body.asString() << LL_ENDL;
 			}
-			llwarns << "CURL HTTP_STATUS: " << http_status << llendl;
+			LL_WARNS() << "CURL HTTP_STATUS: " << http_status << LL_ENDL;
 			if (method == HTTP_RAW_GET)
 			{
-				llwarns << "CURL ERROR BODY: " << responder->getRaw() << llendl;
+				LL_WARNS() << "CURL ERROR BODY: " << responder->getRaw() << LL_ENDL;
 			}
 			else
 			{
-				llwarns << "CURL ERROR BODY: " << responder->getContent().asString() << llendl;
+				LL_WARNS() << "CURL ERROR BODY: " << responder->getContent().asString() << LL_ENDL;
 			}
 		}
 		if (method == HTTP_RAW_GET)
@@ -722,9 +722,14 @@ void LLHTTPClient::put(std::string const& url, LLSD const& body, ResponderPtr re
 	request(url, HTTP_PUT, new LLSDInjector(body), responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug), no_keep_alive, no_does_authentication, no_allow_compressed_reply);
 }
 
-void LLHTTPClient::putRaw(const std::string& url, const char* data, S32 size, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug))
+void LLHTTPClient::putRaw(const std::string& url, const U8* data, S32 size, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug))
 {
 	request(url, HTTP_PUT, new RawInjector(data, size), responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug), no_keep_alive, no_does_authentication, no_allow_compressed_reply);
+}
+
+void LLHTTPClient::patch(std::string const& url, LLSD const& body, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug), EKeepAlive keepalive, AIStateMachine* parent, AIStateMachine::state_type new_parent_state)
+{
+	request(url, HTTP_PATCH, new LLSDInjector(body), responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug), keepalive, no_does_authentication, allow_compressed_reply, parent, new_parent_state);
 }
 
 void LLHTTPClient::post(std::string const& url, LLSD const& body, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug), EKeepAlive keepalive, AIStateMachine* parent, AIStateMachine::state_type new_parent_state)
@@ -753,7 +758,7 @@ void LLHTTPClient::postXMLRPC(std::string const& url, char const* method, XMLRPC
   	request(url, HTTP_POST, new XMLRPCInjector(xmlrpc_request), responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug), keepalive, does_authentication, no_allow_compressed_reply);
 }
 
-void LLHTTPClient::postRaw(std::string const& url, char const* data, S32 size, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug), EKeepAlive keepalive)
+void LLHTTPClient::postRaw(std::string const& url, U8 const* data, S32 size, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug), EKeepAlive keepalive)
 {
 	request(url, HTTP_POST, new RawInjector(data, size), responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug), keepalive);
 }
@@ -779,4 +784,11 @@ void LLHTTPClient::move(std::string const& url, std::string const& destination, 
 {
 	headers.addHeader("Destination", destination);
 	request(url, HTTP_MOVE, NULL, responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug));
+}
+
+// static
+void LLHTTPClient::copy(std::string const& url, std::string const& destination, ResponderPtr responder, AIHTTPHeaders& headers/*,*/ DEBUG_CURLIO_PARAM(EDebugCurl debug))
+{
+	headers.addHeader("Destination", destination);
+	request(url, HTTP_COPY, NULL, responder, headers, NULL/*,*/ DEBUG_CURLIO_PARAM(debug));
 }

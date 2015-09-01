@@ -28,6 +28,7 @@
 
 #include "lfsimfeaturehandler.h"
 #include "llpaneleditwearable.h"
+#include "lllocaltextureobject.h"
 #include "llpanel.h"
 #include "llviewerwearable.h"
 #include "lluictrl.h"
@@ -425,7 +426,7 @@ get_pickers_indexes<LLColorSwatchCtrl> (const LLEditWearableDictionary::Wearable
 {
 	if (!wearable_entry)
 	{
-		llwarns << "could not get LLColorSwatchCtrl indexes for null wearable entry." << llendl;
+		LL_WARNS() << "could not get LLColorSwatchCtrl indexes for null wearable entry." << LL_ENDL;
 		return null_texture_vec;
 	}
 	return wearable_entry->mColorSwatchCtrls;
@@ -438,7 +439,7 @@ get_pickers_indexes<LLTextureCtrl> (const LLEditWearableDictionary::WearableEntr
 {
 	if (!wearable_entry)
 	{
-		llwarns << "could not get LLTextureCtrl indexes for null wearable entry." << llendl;
+		LL_WARNS() << "could not get LLTextureCtrl indexes for null wearable entry." << LL_ENDL;
 		return null_texture_vec;
 	}
 	return wearable_entry->mTextureCtrls;
@@ -468,7 +469,7 @@ find_picker_ctrl_entry_if(LLWearableType::EType type, const Predicate pred)
 		= LLEditWearableDictionary::getInstance()->getWearable(type);
 	if (!wearable_entry)
 	{
-		llwarns << "could not get wearable dictionary entry for wearable of type: " << type << llendl;
+		LL_WARNS() << "could not get wearable dictionary entry for wearable of type: " << type << LL_ENDL;
 		return NULL;
 	}
 	const texture_vec_t& indexes = get_pickers_indexes<CtrlType>(wearable_entry);
@@ -481,7 +482,7 @@ find_picker_ctrl_entry_if(LLWearableType::EType type, const Predicate pred)
 		const LLEditWearableDictionary::PickerControlEntry* entry = get_picker_entry<CtrlType>(te);
 		if (!entry)
 		{
-			llwarns << "could not get picker dictionary entry (" << te << ") for wearable of type: " << type << llendl;
+			LL_WARNS() << "could not get picker dictionary entry (" << te << ") for wearable of type: " << type << LL_ENDL;
 			continue;
 		}
 		if (pred(entry))
@@ -497,13 +498,13 @@ void for_each_picker_ctrl_entry(LLPanel* panel, LLWearableType::EType type, func
 {
 	if (!panel)
 	{
-		llwarns << "the panel wasn't passed for wearable of type: " << type << llendl;
+		LL_WARNS() << "the panel wasn't passed for wearable of type: " << type << LL_ENDL;
 		return;
 	}
 	const LLEditWearableDictionary::WearableEntry* wearable_entry = LLEditWearableDictionary::getInstance()->getWearable(type);
 	if (!wearable_entry)
 	{
-		llwarns << "could not get wearable dictionary entry for wearable of type: " << type << llendl;
+		LL_WARNS() << "could not get wearable dictionary entry for wearable of type: " << type << LL_ENDL;
 		return;
 	}
 	const texture_vec_t& indexes = get_pickers_indexes<CtrlType>(wearable_entry);
@@ -516,7 +517,7 @@ void for_each_picker_ctrl_entry(LLPanel* panel, LLWearableType::EType type, func
 		const LLEditWearableDictionary::PickerControlEntry* entry = get_picker_entry<CtrlType>(te);
 		if (!entry)
 		{
-			llwarns << "could not get picker dictionary entry (" << te << ") for wearable of type: " << type << llendl;
+			LL_WARNS() << "could not get picker dictionary entry (" << te << ") for wearable of type: " << type << LL_ENDL;
 			continue;
 		}
 		fun (panel, entry);
@@ -732,7 +733,7 @@ BOOL LLPanelEditWearable::postBuild()
 		const LLEditWearableDictionary::WearableEntry *wearable_entry = LLEditWearableDictionary::getInstance()->getWearable(mType);
 		if (!wearable_entry)
 		{
-			llwarns << "could not get wearable dictionary entry for wearable of type: " << mType << llendl;
+			LL_WARNS() << "could not get wearable dictionary entry for wearable of type: " << mType << LL_ENDL;
 		}
 		U8 num_subparts = wearable_entry->mSubparts.size();
 
@@ -744,14 +745,14 @@ BOOL LLPanelEditWearable::postBuild()
 			
 			if (!subpart_entry)
 			{
-				llwarns << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << llendl;
+				LL_WARNS() << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << LL_ENDL;
 				mSubpartBtns.push_back(NULL);
 				continue;
 			}
 			
 			if (!subpart_entry->mButtonName.empty())
 			{
-				llinfos << "Finding button " << subpart_entry->mButtonName << llendl;
+				LL_INFOS() << "Finding button " << subpart_entry->mButtonName << LL_ENDL;
 				LLButton* btn(findChild<LLButton>(subpart_entry->mButtonName));
 				llassert_always(btn);
 				mSubpartBtns.push_back(btn);
@@ -760,7 +761,7 @@ BOOL LLPanelEditWearable::postBuild()
 			else
 			{
 				mSubpartBtns.push_back(NULL);
-				llwarns << "could not get wearable subpart button for subpart num: " << subpart_e << llendl;
+				LL_WARNS() << "could not get wearable subpart button for subpart num: " << subpart_e << LL_ENDL;
 			}
 		}
 		// initialize texture and color picker controls
@@ -770,7 +771,8 @@ BOOL LLPanelEditWearable::postBuild()
 
 	if (mTab = findChild<LLTabContainer>("layer_tabs"))
 	{
-		for(U32 i = 1; i <= LLAgentWearables::MAX_CLOTHING_PER_TYPE; ++i)
+		LL_COMPILE_TIME_MESSAGE("layer_tabs needs re-implemented");
+		for(U32 i = 1; i <= 6/*LLAgentWearables::MAX_CLOTHING_PER_TYPE*/; ++i)
 		{
 			LLPanel* new_panel = new LLPanel(llformat("%i",i));
 			mTab->addTabPanel(new_panel, llformat("Layer %i",i));
@@ -803,14 +805,14 @@ void LLPanelEditWearable::draw()
 	BOOL has_wearable = (wearable != NULL );
 	BOOL has_any_wearable = has_wearable || gAgentWearables.getWearableCount(mType);
 	BOOL is_dirty = isDirty();
-	BOOL is_modifiable = FALSE;
+	BOOL is_modifiable = TRUE;
 	BOOL is_copyable = FALSE;
 	BOOL is_complete = FALSE;
 	LLInventoryItem* item = NULL;
 	if (wearable && (item = gInventory.getItem(wearable->getItemID())))
 	{
 		const LLPermissions& perm = item->getPermissions();
-		is_modifiable = perm.allowModifyBy(gAgent.getID(), gAgent.getGroupID());
+//		is_modifiable = perm.allowModifyBy(gAgent.getID(), gAgent.getGroupID());
 		is_copyable = perm.allowCopyBy(gAgent.getID(), gAgent.getGroupID());
 		is_complete = ((LLViewerInventoryItem*)item)->isComplete();
 	}
@@ -864,7 +866,7 @@ void LLPanelEditWearable::draw()
 
 			if (!subpart_entry)
 			{
-					llwarns << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << llendl;
+					LL_WARNS() << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << LL_ENDL;
 					continue;
 			}
 
@@ -1007,15 +1009,13 @@ void LLPanelEditWearable::refreshWearables(bool force_immediate)
 	U32 index;
 	if (mPendingWearable)
 	{
-		index = gAgentWearables.getWearableIndex(mPendingWearable);
-		if (index == LLAgentWearables::MAX_CLOTHING_PER_TYPE)
+		if (!gAgentWearables.getWearableIndex(mPendingWearable, index))
 			return;
 		mPendingWearable = NULL;
 	}
 	else
 	{
-		index = gAgentWearables.getWearableIndex(getWearable());
-		if (index == LLAgentWearables::MAX_CLOTHING_PER_TYPE)
+		if (!gAgentWearables.getWearableIndex(mPendingWearable, index))
 		{
 			index = gAgentWearables.getWearableCount(mType);
 			if (index)
@@ -1025,7 +1025,8 @@ void LLPanelEditWearable::refreshWearables(bool force_immediate)
 
 	if (mTab)
 	{
-		for(U32 i = 0; i < LLAgentWearables::MAX_CLOTHING_PER_TYPE; ++i)
+		LL_COMPILE_TIME_MESSAGE("layer_tabs needs re-implemented");
+		for(U32 i = 0; i < 6/*LLAgentWearables::MAX_CLOTHING_PER_TYPE*/; ++i)
 		{
 			mTab->enableTabButton(i, i < gAgentWearables.getWearableCount(mType));
 		}
@@ -1062,12 +1063,12 @@ void LLPanelEditWearable::onCommitSexChange()
 
 	LLWearableType::EType type = mType;	// TODO: MULTI-WEARABLE
 	U32 index = mCurrentIndex;	// TODO: MULTI-WEARABLE
-
+/*
 	if (!gAgentWearables.isWearableModifiable(type, index))
 	{
 		return;
 	}
-	
+*/
 	LLViewerVisualParam* param = static_cast<LLViewerVisualParam*>(gAgentAvatarp->getVisualParam( "male" ));
 	if (!param)
 	{
@@ -1136,7 +1137,7 @@ void LLPanelEditWearable::onTexturePickerCommit(const LLUICtrl* ctrl)
 	const LLTextureCtrl* texture_ctrl = dynamic_cast<const LLTextureCtrl*>(ctrl);
 	if (!texture_ctrl)
 	{
-		llwarns << "got commit signal from not LLTextureCtrl." << llendl;
+		LL_WARNS() << "got commit signal from not LLTextureCtrl." << LL_ENDL;
 		return;
 	}
 	
@@ -1153,7 +1154,7 @@ void LLPanelEditWearable::onTexturePickerCommit(const LLUICtrl* ctrl)
 		}
 		else
 		{
-			llwarns << "could not get texture picker dictionary entry for wearable of type: " << type << llendl;
+			LL_WARNS() << "could not get texture picker dictionary entry for wearable of type: " << type << LL_ENDL;
 		}
 	}
 }
@@ -1167,10 +1168,13 @@ void LLPanelEditWearable::setNewImageID(ETextureIndex te_index, LLUUID const& uu
 	}
 	if (getWearable())
 	{
-		U32 index = gAgentWearables.getWearableIndex(getWearable());
-		gAgentAvatarp->setLocalTexture(te_index, image, FALSE, index);
-		LLVisualParamHint::requestHintUpdates();
-		gAgentAvatarp->wearableUpdated(mType, FALSE);
+		U32 index;
+		if (gAgentWearables.getWearableIndex(getWearable(), index))
+		{
+			gAgentAvatarp->setLocalTexture(te_index, image, FALSE, index);
+			LLVisualParamHint::requestHintUpdates();
+			gAgentAvatarp->wearableUpdated(mType, FALSE);
+		}
 	}
 	if (mType == LLWearableType::WT_ALPHA && image->getID() != IMG_INVISIBLE)
 	{
@@ -1200,7 +1204,7 @@ void LLPanelEditWearable::onColorSwatchCommit(const LLUICtrl* base_ctrl )
 		}
 		else
 		{
-			llwarns << "could not get color swatch dictionary entry for wearable of type: " << type << llendl;
+			LL_WARNS() << "could not get color swatch dictionary entry for wearable of type: " << type << LL_ENDL;
 		}
 	}
 }
@@ -1229,7 +1233,8 @@ void LLPanelEditWearable::saveChanges(bool force_save_as, std::string new_name)
 		return;
 	}
 	
-	U32 index = gAgentWearables.getWearableIndex(getWearable());
+	U32 index;
+	gAgentWearables.getWearableIndex(getWearable(), index);
 
 	// Find an existing link to this wearable's inventory item, if any, and its description field.
 	LLInventoryItem *link_item = NULL;
@@ -1241,7 +1246,7 @@ void LLPanelEditWearable::saveChanges(bool force_save_as, std::string new_name)
 			LLAppearanceMgr::instance().findCOFItemLinks(getWearable()->getItemID());
 		if (links.size()>0)
 		{
-			link_item = links.get(0).get();
+			link_item = links.at(0).get();
 			if (link_item && link_item->getIsLinkType())
 			{
 				description = link_item->getActualDescription();
@@ -1270,15 +1275,11 @@ void LLPanelEditWearable::saveChanges(bool force_save_as, std::string new_name)
 		if (link_item)
 		{
 			// Create new link
-			link_inventory_item( gAgent.getID(),
-								 link_item->getLinkedUUID(),
-								 LLAppearanceMgr::instance().getCOF(),
-								 link_item->getName(),
-								 description,
-								 LLAssetType::AT_LINK,
+			link_inventory_object( LLAppearanceMgr::instance().getCOF(),
+								 link_item,
 								 NULL);
-			// Remove old link
-			gInventory.purgeObject(link_item->getUUID());
+
+			remove_inventory_item(link_item, NULL);
 		}
 		gAgentWearables.saveWearable(mType, index, TRUE, new_name);
 	}
@@ -1312,7 +1313,8 @@ void LLPanelEditWearable::showDefaultSubpart()
 void LLPanelEditWearable::setUIPermissions(U32 perm_mask, BOOL is_complete)
 {
 	BOOL is_copyable = (perm_mask & PERM_COPY) ? TRUE : FALSE;
-	BOOL is_modifiable = (perm_mask & PERM_MODIFY) ? TRUE : FALSE;
+//	BOOL is_modifiable = (perm_mask & PERM_MODIFY) ? TRUE : FALSE;
+	BOOL is_modifiable = TRUE;
 
 	mSave->setEnabled(is_modifiable && is_complete);
 	mSaveAs->setEnabled(is_copyable && is_complete);
@@ -1336,13 +1338,13 @@ void LLPanelEditWearable::changeCamera(U8 subpart)
 	const LLEditWearableDictionary::WearableEntry *wearable_entry = LLEditWearableDictionary::getInstance()->getWearable(mType);
 	if (!wearable_entry)
 	{
-		llinfos << "could not get wearable dictionary entry for wearable type: " << mType << llendl;
+		LL_INFOS() << "could not get wearable dictionary entry for wearable type: " << mType << LL_ENDL;
 		return;
 	}
 
 	if (subpart >= wearable_entry->mSubparts.size())
 	{
-		llinfos << "accordion tab expanded for invalid subpart. Wearable type: " << mType << " subpart num: " << subpart << llendl;
+		LL_INFOS() << "accordion tab expanded for invalid subpart. Wearable type: " << mType << " subpart num: " << subpart << LL_ENDL;
 		return;
 	}
 
@@ -1351,7 +1353,7 @@ void LLPanelEditWearable::changeCamera(U8 subpart)
 
 	if (!subpart_entry)
 	{
-		llwarns << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << llendl;
+		LL_WARNS() << "could not get wearable subpart dictionary entry for subpart: " << subpart_e << LL_ENDL;
 		return;
 	}
 
@@ -1425,7 +1427,7 @@ bool LLPanelEditWearable::updatePermissions()
 	setUIPermissions(perm_mask, is_complete);
 	mCustomizeFloater->childSetEnabled("Export", can_export);
 	mCustomizeFloater->childSetEnabled("Import", can_import);
-	return (perm_mask & PERM_MODIFY) && is_complete;
+	return /*(perm_mask & PERM_MODIFY) &&*/ is_complete;
 }
 
 void LLPanelEditWearable::updateScrollingPanelList()
@@ -1442,16 +1444,16 @@ void LLPanelEditWearable::updateScrollingPanelUI()
 		return;
 	}
 	
-	llinfos << llformat("%#.8lX",wearable) << llendl;
-	llinfos << "cur_wearable->isDirty()=" << wearable->isDirty() << llendl;
+	LL_INFOS() << llformat("%#.8lX",wearable) << LL_ENDL;
+	LL_INFOS() << "cur_wearable->isDirty()=" << wearable->isDirty() << LL_ENDL;
 
 	LLViewerInventoryItem* item = gInventory.getItem(wearable->getItemID());
 	if (item)
 	{
-		U32 perm_mask = item->getPermissions().getMaskOwner();
+//		U32 perm_mask = item->getPermissions().getMaskOwner();
 		BOOL is_complete = item->isComplete();
 		LLScrollingPanelParam::sUpdateDelayFrames = 0;
-		mCustomizeFloater->getScrollingPanelList()->updatePanels((perm_mask & PERM_MODIFY) && is_complete);
+		mCustomizeFloater->getScrollingPanelList()->updatePanels(/*(perm_mask & PERM_MODIFY) &&*/ is_complete);
 	}
 }
 
@@ -1533,7 +1535,7 @@ void LLPanelEditWearable::onInvisibilityCommit(LLUICtrl* ctrl, LLAvatarAppearanc
 	if (!getWearable())
 		return;
 	
-	llinfos << "onInvisibilityCommit, self " << this << " ctrl " << ctrl << llendl;
+	LL_INFOS() << "onInvisibilityCommit, self " << this << " ctrl " << ctrl << LL_ENDL;
 	
 	bool new_invis_state = ctrl->getValue();
 	if (new_invis_state)
@@ -1542,9 +1544,12 @@ void LLPanelEditWearable::onInvisibilityCommit(LLUICtrl* ctrl, LLAvatarAppearanc
 		mPreviousAlphaTexture[te] = lto->getID();
 		
 		LLViewerFetchedTexture* image = LLViewerTextureManager::getFetchedTexture( IMG_INVISIBLE );
-		U32 index = gAgentWearables.getWearableIndex(getWearable());
-		gAgentAvatarp->setLocalTexture(te, image, FALSE, index);
-		gAgentAvatarp->wearableUpdated(getWearable()->getType(), FALSE);
+		U32 index;
+		if (gAgentWearables.getWearableIndex(getWearable(), index))
+		{
+			gAgentAvatarp->setLocalTexture(te, image, FALSE, index);
+			gAgentAvatarp->wearableUpdated(getWearable()->getType(), FALSE);
+		}
 	}
 	else
 	{
@@ -1562,9 +1567,12 @@ void LLPanelEditWearable::onInvisibilityCommit(LLUICtrl* ctrl, LLAvatarAppearanc
 		if (!image)
 			return;
 		
-		U32 index = gAgentWearables.getWearableIndex(getWearable());
-		gAgentAvatarp->setLocalTexture(te, image, FALSE, index);
-		gAgentAvatarp->wearableUpdated(getWearable()->getType(), FALSE);
+		U32 index;
+		if (gAgentWearables.getWearableIndex(getWearable(), index))
+		{
+			gAgentAvatarp->setLocalTexture(te, image, FALSE, index);
+			gAgentAvatarp->wearableUpdated(getWearable()->getType(), FALSE);
+		}
 	}
 }
 

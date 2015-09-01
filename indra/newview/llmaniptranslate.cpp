@@ -361,7 +361,7 @@ BOOL LLManipTranslate::handleMouseDownOnPart( S32 x, S32 y, MASK mask )
 	if (!selectNode)
 	{
 		// didn't find the object in our selection...oh well
-		llwarns << "Trying to translate an unselected object" << llendl;
+		LL_WARNS() << "Trying to translate an unselected object" << LL_ENDL;
 		return TRUE;
 	}
 
@@ -369,7 +369,7 @@ BOOL LLManipTranslate::handleMouseDownOnPart( S32 x, S32 y, MASK mask )
 	if (!selected_object)
 	{
 		// somehow we lost the object!
-		llwarns << "Translate manip lost the object, no selected object" << llendl;
+		LL_WARNS() << "Translate manip lost the object, no selected object" << LL_ENDL;
 		gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 		return TRUE;
 	}
@@ -390,7 +390,7 @@ BOOL LLManipTranslate::handleMouseDownOnPart( S32 x, S32 y, MASK mask )
 		if (!LLViewerCamera::getInstance()->projectPosAgentToScreen(select_center_agent, mouse_pos))
 		{
 			// mouse_pos may be nonsense
-			llwarns << "Failed to project object center to screen" << llendl;
+			LL_WARNS() << "Failed to project object center to screen" << LL_ENDL;
 		}
 		else if (gSavedSettings.getBOOL("SnapToMouseCursor"))
 		{
@@ -418,7 +418,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	// Bail out if mouse not down.
 	if( !hasMouseCapture() )
 	{
-		lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (inactive)" << llendl;		
+		LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (inactive)" << LL_ENDL;
 		// Always show cursor
 		// gViewerWindow->setCursor(UI_CURSOR_ARROW);
 		gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
@@ -454,7 +454,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	// rotation above.
 	if( x == mLastHoverMouseX && y == mLastHoverMouseY && !rotated)
 	{
-		lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (mouse unmoved)" << llendl;
+		LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (mouse unmoved)" << LL_ENDL;
 		gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 		return TRUE;
 	}
@@ -467,7 +467,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	{
 		if (abs(mMouseDownX - x) < MOUSE_DRAG_SLOP && abs(mMouseDownY - y) < MOUSE_DRAG_SLOP )
 		{
-			lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (mouse inside slop)" << llendl;
+			LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (mouse inside slop)" << LL_ENDL;
 			gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 			return TRUE;
 		}
@@ -491,7 +491,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 
 				// When we make the copy, we don't want to do any other processing.
 				// If so, the object will also be moved, and the copy will be offset.
-				lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (made copy)" << llendl;
+				LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (made copy)" << LL_ENDL;
 				gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 			}
 		}
@@ -508,7 +508,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	if (!selectNode)
 	{
 		// somehow we lost the object!
-		llwarns << "Translate manip lost the object, no selectNode" << llendl;
+		LL_WARNS() << "Translate manip lost the object, no selectNode" << LL_ENDL;
 		gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 		return TRUE;
 	}
@@ -517,7 +517,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	if (!object)
 	{
 		// somehow we lost the object!
-		llwarns << "Translate manip lost the object, no object in selectNode" << llendl;
+		LL_WARNS() << "Translate manip lost the object, no object in selectNode" << LL_ENDL;
 		gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 		return TRUE;
 	}
@@ -547,7 +547,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 
 		if (relative_move.magVecSquared() > max_drag_distance * max_drag_distance)
 		{
-			lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (too far)" << llendl;
+			LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (too far)" << LL_ENDL;
 			gViewerWindow->setCursor(UI_CURSOR_NOLOCKED);
 			return TRUE;
 		}
@@ -792,7 +792,7 @@ BOOL LLManipTranslate::handleHover(S32 x, S32 y, MASK mask)
 	gAgentCamera.clearFocusObject();
 	dialog_refresh_all();		// ??? is this necessary?
 
-	lldebugst(LLERR_USER_INPUT) << "hover handled by LLManipTranslate (active)" << llendl;
+	LL_DEBUGS("UserInput") << "hover handled by LLManipTranslate (active)" << LL_ENDL;
 	gViewerWindow->setCursor(UI_CURSOR_TOOLTRANSLATE);
 	return TRUE;
 }
@@ -1263,7 +1263,7 @@ void LLManipTranslate::renderSnapGuides()
 		// find distance to nearest smallest grid unit
 		F32 offset_nearest_grid_unit = fmodf(dist_grid_axis, smallest_grid_unit_scale);
 		// how many smallest grid units are we away from largest grid scale?
-		S32 sub_div_offset = llmath::llround(fmodf(dist_grid_axis - offset_nearest_grid_unit, getMinGridScale() / sGridMinSubdivisionLevel) / smallest_grid_unit_scale);
+		S32 sub_div_offset = ll_round(fmodf(dist_grid_axis - offset_nearest_grid_unit, getMinGridScale() / sGridMinSubdivisionLevel) / smallest_grid_unit_scale);
 		S32 num_ticks_per_side = llmax(1, llfloor(0.5f * guide_size_meters / smallest_grid_unit_scale));
 
 		LLGLDepthTest gls_depth(GL_FALSE);
@@ -1377,12 +1377,12 @@ void LLManipTranslate::renderSnapGuides()
 			}
 		}
 
-		sub_div_offset = llmath::llround(fmod(dist_grid_axis - offset_nearest_grid_unit, getMinGridScale() * 32.f) / smallest_grid_unit_scale);
+		sub_div_offset = ll_round(fmod(dist_grid_axis - offset_nearest_grid_unit, getMinGridScale() * 32.f) / smallest_grid_unit_scale);
 
 		LLVector2 screen_translate_axis(llabs(translate_axis * LLViewerCamera::getInstance()->getLeftAxis()), llabs(translate_axis * LLViewerCamera::getInstance()->getUpAxis()));
 		screen_translate_axis.normVec();
 
-		S32 tick_label_spacing = llmath::llround(screen_translate_axis * sTickLabelSpacing);
+		S32 tick_label_spacing = ll_round(screen_translate_axis * sTickLabelSpacing);
         
 		// render tickmark values
 		for (S32 i = -num_ticks_per_side; i <= num_ticks_per_side; i++)
@@ -1420,7 +1420,7 @@ void LLManipTranslate::renderSnapGuides()
 				F32 offset_val = 0.5f * tick_offset.mV[ARROW_TO_AXIS[mManipPart]] / getMinGridScale();
 				EGridMode grid_mode = LLSelectMgr::getInstance()->getGridMode();
 				F32 text_highlight = 0.8f;
-				if(i - llmath::llround(offset_nearest_grid_unit / smallest_grid_unit_scale) == 0 && mInSnapRegime)
+				if(i - ll_round(offset_nearest_grid_unit / smallest_grid_unit_scale) == 0 && mInSnapRegime)
 				{
 					text_highlight = 1.f;
 				}
@@ -2271,7 +2271,7 @@ void LLManipTranslate::renderArrow(S32 which_arrow, S32 selected_arrow, F32 box_
 			axis.mV[0] = 1.0f;
 			break;
 		default:
-			llerrs << "renderArrow called with bad arrow " << which_arrow << llendl;
+			LL_ERRS() << "renderArrow called with bad arrow " << which_arrow << LL_ENDL;
 			break;
 		}
 

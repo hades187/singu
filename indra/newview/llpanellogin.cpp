@@ -191,7 +191,7 @@ LLPanelLogin::LLPanelLogin(const LLRect& rect)
 	sendChildToBack(getChildView("channel_text"));
 	sendChildToBack(getChildView("forgot_password_text"));
 
-	//llinfos << " url history: " << LLSDOStreamer<LLSDXMLFormatter>(LLURLHistory::getURLHistory("regionuri")) << llendl;
+	//LL_INFOS() << " url history: " << LLSDOStreamer<LLSDXMLFormatter>(LLURLHistory::getURLHistory("regionuri")) << LL_ENDL;
 
 	LLComboBox* location_combo = getChild<LLComboBox>("start_location_combo");
 	updateLocationSelectorsVisibility(); // separate so that it can be called from preferences
@@ -381,12 +381,6 @@ void LLPanelLogin::draw()
 // virtual
 BOOL LLPanelLogin::handleKeyHere(KEY key, MASK mask)
 {
-	if (( KEY_RETURN == key ) && (MASK_ALT == mask))
-	{
-		gViewerWindow->toggleFullscreen(FALSE);
-		return TRUE;
-	}
-
 	if (('T' == key) && (MASK_CONTROL == mask))
 	{
 		new LLFloaterSimple("floater_test.xml");
@@ -396,7 +390,7 @@ BOOL LLPanelLogin::handleKeyHere(KEY key, MASK mask)
 # if !LL_RELEASE_FOR_DOWNLOAD
 	if ( KEY_F2 == key )
 	{
-		llinfos << "Spawning floater TOS window" << llendl;
+		LL_INFOS() << "Spawning floater TOS window" << LL_ENDL;
 		LLFloaterTOS* tos_dialog = LLFloaterTOS::show(LLFloaterTOS::TOS_TOS,"");
 		tos_dialog->startModal();
 		return TRUE;
@@ -485,7 +479,7 @@ void LLPanelLogin::setFields(const std::string& firstname,
 {
 	if (!sInstance)
 	{
-		llwarns << "Attempted fillFields with no login view shown" << llendl;
+		LL_WARNS() << "Attempted fillFields with no login view shown" << LL_ENDL;
 		return;
 	}
 
@@ -503,14 +497,14 @@ void LLPanelLogin::setFields(const std::string& firstname,
 		// fill it with MAX_PASSWORD characters so we get a 
 		// nice row of asterixes.
 		const std::string filler("123456789!123456");
-		sInstance->childSetText("password_edit", filler);
+		sInstance->getChild<LLUICtrl>("password_edit")->setValue(filler);
 		sInstance->mIncomingPassword = filler;
 		sInstance->mMungedPassword = password;
 	}
 	else
 	{
 		// this is a normal text password
-		sInstance->childSetText("password_edit", password);
+		sInstance->getChild<LLUICtrl>("password_edit")->setValue(password);
 		sInstance->mIncomingPassword = password;
 		LLMD5 pass((unsigned char *)password.c_str());
 		char munged_password[MD5HEX_STR_SIZE];
@@ -524,7 +518,7 @@ void LLPanelLogin::setFields(const LLSavedLoginEntry& entry, bool takeFocus)
 {
 	if (!sInstance)
 	{
-		llwarns << "Attempted setFields with no login view shown" << llendl;
+		LL_WARNS() << "Attempted setFields with no login view shown" << LL_ENDL;
 		return;
 	}
 
@@ -533,7 +527,7 @@ void LLPanelLogin::setFields(const LLSavedLoginEntry& entry, bool takeFocus)
 	LLComboBox* login_combo = sInstance->getChild<LLComboBox>("username_combo");
 	login_combo->setTextEntry(fullname);
 	login_combo->resetTextDirty();
-	//sInstance->childSetText("username_combo", fullname);
+	//sInstance->getChild<LLUICtrl>("username_combo")->setValue(fullname);
 
 	std::string grid = entry.getGrid();
 	//grid comes via LLSavedLoginEntry, which uses full grid names, not nicks
@@ -544,13 +538,13 @@ void LLPanelLogin::setFields(const LLSavedLoginEntry& entry, bool takeFocus)
 	
 	if (entry.getPassword().empty())
 	{
-		sInstance->childSetText("password_edit", std::string(""));
+		sInstance->getChild<LLUICtrl>("password_edit")->setValue(LLStringUtil::null);
 		remember_pass_check->setValue(LLSD(false));
 	}
 	else
 	{
 		const std::string filler("123456789!123456");
-		sInstance->childSetText("password_edit", filler);
+		sInstance->getChild<LLUICtrl>("password_edit")->setValue(filler);
 		sInstance->mIncomingPassword = filler;
 		sInstance->mMungedPassword = entry.getPassword();
 		remember_pass_check->setValue(LLSD(true));
@@ -567,7 +561,7 @@ void LLPanelLogin::getFields(std::string& firstname, std::string& lastname, std:
 {
 	if (!sInstance)
 	{
-		llwarns << "Attempted getFields with no login view shown" << llendl;
+		LL_WARNS() << "Attempted getFields with no login view shown" << LL_ENDL;
 		return;
 	}
 	
@@ -583,7 +577,7 @@ void LLPanelLogin::getFields(std::string& firstname, std::string& lastname, std:
 {
 	if (!sInstance)
 	{
-		llwarns << "Attempted getLocation with no login view shown" << llendl;
+		LL_WARNS() << "Attempted getLocation with no login view shown" << LL_ENDL;
 		return;
 	}
 	
@@ -831,7 +825,7 @@ bool LLPanelLogin::newAccountAlertCallback(const LLSD& notification, const LLSD&
 {
 	if (0 == LLNotification::getSelectedOption(notification, response))
 	{
-		llinfos << "Going to account creation URL" << llendl;
+		LL_INFOS() << "Going to account creation URL" << LL_ENDL;
 		LLWeb::loadURLExternal(CREATE_ACCOUNT_URL);
 	}
 	return false;
@@ -844,12 +838,12 @@ void LLPanelLogin::onClickNewAccount()
 	const std::string& url = gHippoGridManager->getCurrentGrid()->getRegisterUrl();
 	if (!url.empty())
 	{
-		llinfos << "Going to account creation URL." << llendl;
+		LL_INFOS() << "Going to account creation URL." << LL_ENDL;
 		LLWeb::loadURLExternal(url);
 	}
 	else
 	{
-		llinfos << "Account creation URL is empty." << llendl;
+		LL_INFOS() << "Account creation URL is empty." << LL_ENDL;
 	}
 }
 
@@ -868,7 +862,7 @@ void LLPanelLogin::onClickForgotPassword()
 	if (!url.empty())
 		LLWeb::loadURLExternal(url);
 	else
-		llwarns << "Link for 'forgotton password' not set." << llendl;
+		LL_WARNS() << "Link for 'forgotton password' not set." << LL_ENDL;
 }
 
 // static
@@ -902,10 +896,8 @@ void LLPanelLogin::refreshLoginPage()
 
 	sInstance->updateGridCombo();
 
-	sInstance->childSetVisible("create_new_account_text",
-		!gHippoGridManager->getCurrentGrid()->getRegisterUrl().empty());
-	sInstance->childSetVisible("forgot_password_text",
-		!gHippoGridManager->getCurrentGrid()->getPasswordUrl().empty());
+	sInstance->getChildView("create_new_account_text")->setVisible(!gHippoGridManager->getCurrentGrid()->getRegisterUrl().empty());
+	sInstance->getChildView("forgot_password_text")->setVisible(!gHippoGridManager->getCurrentGrid()->getPasswordUrl().empty());
 
 	std::string login_page = gHippoGridManager->getCurrentGrid()->getLoginPage();
 	if (!login_page.empty())
@@ -996,7 +988,7 @@ void LLPanelLogin::onLoginComboLostFocus(LLComboBox* combo_box)
 {
 	if (combo_box->isTextDirty())
 	{
-		childSetText("password_edit", mIncomingPassword = mMungedPassword = LLStringUtil::null);
+		getChild<LLUICtrl>("password_edit")->setValue(mIncomingPassword = mMungedPassword = LLStringUtil::null);
 		combo_box->resetTextDirty();
 	}
 }

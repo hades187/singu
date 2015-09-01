@@ -16,6 +16,7 @@
 
 #include "llviewerprecompiledheaders.h"
 #include "llagent.h"
+#include "llagentcamera.h"
 #include "llappearancemgr.h"
 #include "llappviewer.h"
 #include "llgroupactions.h"
@@ -27,6 +28,7 @@
 #include "llviewerregion.h"
 
 #include "rlvhandler.h"
+#include "rlvhelper.h"
 #include "rlvinventory.h"
 #include "rlvlocks.h"
 #include "rlvui.h"
@@ -840,6 +842,31 @@ bool RlvHandler::redirectChatOrEmote(const std::string& strUTF8Text) const
 	return true;
 }
 
+void RlvHandler::updatePole(const ERlvBehaviour& bhvr, bool max)
+{
+	F32 pole(max ? F32_MAX : F32_MIN);
+	for (rlv_exception_map_t::const_iterator i = m_Exceptions.lower_bound(bhvr),
+			end = m_Exceptions.upper_bound(bhvr); i != end; ++i)
+	{
+		F32 val(boost::get<F32>(i->second.varOption));
+		if (max ? val < pole : val > pole) pole = val;
+	}
+	m_Poles[bhvr] = pole;
+}
+
+LLColor3 RlvHandler::camDrawColor() const
+{
+	LLColor3 ret;
+	U32 count(0);
+	for (rlv_exception_map_t::const_iterator i = m_Exceptions.lower_bound(RLV_BHVR_CAMDRAWCOLOR),
+			end = m_Exceptions.upper_bound(RLV_BHVR_CAMDRAWCOLOR); i != end; ++i, ++count)
+		ret += boost::get<LLColor3>(i->second.varOption);
+	ret.mV[0]/=count;
+	ret.mV[1]/=count;
+	ret.mV[2]/=count;
+	return ret;
+}
+
 // ============================================================================
 // Composite folders
 //
@@ -946,9 +973,9 @@ bool RlvHandler::redirectChatOrEmote(const std::string& strUTF8Text) const
 		RlvWearableItemCollector functor(pFolder->getUUID(), true, false);
 		gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, functor);
 
-		for (S32 idxItem = 0, cntItem = items.count(); idxItem < cntItem; idxItem++)
+		for (S32 idxItem = 0, cntItem = items.size(); idxItem < cntItem; idxItem++)
 		{
-			const LLViewerInventoryItem* pItem = items.get(idxItem);
+			const LLViewerInventoryItem* pItem = items.at(idxItem);
 			switch (pItem->getType())
 			{
 				case LLAssetType::AT_BODYPART:
@@ -991,9 +1018,9 @@ bool RlvHandler::redirectChatOrEmote(const std::string& strUTF8Text) const
 		RlvWearableItemCollector functor(pFolder->getUUID(), true, false);
 		gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, functor);
 
-		for (S32 idxItem = 0, cntItem = items.count(); idxItem < cntItem; idxItem++)
+		for (S32 idxItem = 0, cntItem = items.size(); idxItem < cntItem; idxItem++)
 		{
-			LLViewerInventoryItem* pItem = items.get(idxItem);
+			LLViewerInventoryItem* pItem = items.at(idxItem);
 
 			if (RlvForceWear::isWearingItem(pItem))
 				continue; // Don't examine any items we're already wearing
@@ -1298,9 +1325,50 @@ ERlvCmdRet RlvHandler::processAddRemCommand(const RlvCommand& rlvCmd)
 					pObj->mText->setString( (RLV_TYPE_ADD == eType) ? "" : pObj->mText->getObjectText());
 			}
 			break;
+		case RLV_BHVR_CAMZOOMMAX:		// @camzoommax:<max_multiplier>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMZOOMMIN:		// @camzoommin:<min_multiplier>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDISTMAX:		// @camdistmax:<max_distance>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDISTMIN:		// @camdistmin:<min_distance>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDRAWMAX:		// @camdrawmax:<max_distance>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDRAWMIN:		// @camdrawmin:<min_distance>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDRAWALPHAMAX:	// @camdrawalphamax:<max_alpha>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMDRAWALPHAMIN:	// @camdrawalphamin:<min_alpha>=n|y			- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMAVDIST:		// @camavdist:<distance>=n|y				- Checked: 2015-05-25 (RLVa:LF)
+		{
+			F32 param;
+			VERIFY_OPTION_REF(LLStringUtil::convertToF32(strOption, param));
+			if (RLV_TYPE_ADD == eType)
+				addException(rlvCmd.getObjectID(), eBhvr, param);
+			else
+				removeException(rlvCmd.getObjectID(), eBhvr, param);
+			updatePole(eBhvr, eBhvr == RLV_BHVR_CAMDISTMAX || eBhvr == RLV_BHVR_CAMZOOMMAX || eBhvr == RLV_BHVR_CAMDRAWMAX || eBhvr == RLV_BHVR_CAMDRAWALPHAMAX);
+			break;
+		}
+		case RLV_BHVR_CAMDRAWCOLOR:		// @camdrawcolor:<red>;<green>;<blue>=n|y	- Checked: 2015-05-25 (RLVa:LF)
+		{
+			LLColor3 color;
+			if (!strOption.empty())
+			{
+				boost_tokenizer tokens(strOption, boost::char_separator<char>(";", "", boost::keep_empty_tokens));
+				boost_tokenizer::const_iterator it = tokens.begin();
+				for (U8 i = 0; i < LENGTHOFCOLOR3 && it != tokens.end(); ++it, ++i)
+					LLStringUtil::convertToF32(*it, color.mV[i]);
+				color.clamp();
+			}
+			if (RLV_TYPE_ADD == eType)
+				addException(rlvCmd.getObjectID(), eBhvr, color);
+			else
+				removeException(rlvCmd.getObjectID(), eBhvr, color);
+			// Singu TODO: If there is work to be done immediately after this is toggled, add to the onToggleCamXXX section in rlvui.cpp
+			eRet = RLV_RET_FAILED_UNKNOWN; // Singu TODO: Hook this up and remove this line.
+			break;
+		}
 		// The following block is only valid if there's no option
 		case RLV_BHVR_SHOWLOC:				// @showloc=n|y						- Checked: 2009-12-05 (RLVa-1.1.0h) | Modified: RLVa-1.1.0h
 		case RLV_BHVR_SHOWNAMES:			// @shownames=n|y					- Checked: 2009-12-05 (RLVa-1.1.0h) | Modified: RLVa-1.1.0h
+		case RLV_BHVR_SHOWNAMETAGS:			// @shownametags=n|y					- Checked: 2015-05-20 (RLVa:LF)
+		case RLV_BHVR_CAMUNLOCK:		// @camunlock=n|y						- Checked: 2015-05-25 (RLVa:LF)
+		case RLV_BHVR_CAMTEXTURES:		// @camtextures=n|y						- Checked: 2015-05-25 (RLVa:LF)
 		case RLV_BHVR_EMOTE:				// @emote=n|y						- Checked: 2010-03-26 (RLVa-1.2.0b)
 		case RLV_BHVR_SENDCHAT:				// @sendchat=n|y					- Checked: 2010-03-26 (RLVa-1.2.0b)
 		case RLV_BHVR_CHATWHISPER:			// @chatwhisper=n|y					- Checked: 2010-03-26 (RLVa-1.2.0b)
@@ -1629,8 +1697,26 @@ ERlvCmdRet RlvHandler::processForceCommand(const RlvCommand& rlvCmd) const
 		case RLV_BHVR_SIT:			// @sit:<option>=force
 			eRet = onForceSit(rlvCmd);
 			break;
-		case RLV_BHVR_ADJUSTHEIGHT:	// @adjustheight:<options>=force
-			eRet = RLV_RET_DEPRECATED;
+		case RLV_BHVR_ADJUSTHEIGHT:	// @adjustheight:<options>=force		- Checked: 2015-03-30 (RLVa-1.5.0)
+			{
+				RlvCommandOptionAdjustHeight rlvCmdOption(rlvCmd);
+				VERIFY_OPTION(rlvCmdOption.isValid());
+				if (isAgentAvatarValid())
+				{
+					F32 nValue = (rlvCmdOption.m_nPelvisToFoot - gAgentAvatarp->getPelvisToFoot()) * rlvCmdOption.m_nPelvisToFootDeltaMult;
+					nValue += rlvCmdOption.m_nPelvisToFootOffset;
+					if (gAgentAvatarp->getRegion()->avatarHoverHeightEnabled())
+					{
+						LLVector3 avOffset(0.0, 0.0, llclamp<F32>(nValue, MIN_HOVER_Z, MAX_HOVER_Z));
+						gSavedPerAccountSettings.setF32("AvatarHoverOffsetZ", avOffset.mV[VZ]);
+						gAgentAvatarp->setHoverOffset(avOffset, true);
+					}
+					else
+					{
+						eRet = RLV_RET_FAILED_DISABLED;
+					}
+				}
+			}
 			break;
 		case RLV_BHVR_TPTO:			// @tpto:<option>=force					- Checked: 2011-03-28 (RLVa-1.3.0f) | Modified: RLVa-1.3.0f
 			{
@@ -1831,8 +1917,8 @@ void RlvHandler::onForceWearCallback(const uuid_vec_t& idItems, ERlvBehaviour eB
 	LLInventoryModel::cat_array_t folders;
 	if (RlvInventory::instance().getPath(idItems, folders))
 	{
-		for (S32 idxFolder = 0, cntFolder = folders.count(); idxFolder < cntFolder; idxFolder++)
-			onForceWear(folders.get(idxFolder), eBhvr);
+		for (S32 idxFolder = 0, cntFolder = folders.size(); idxFolder < cntFolder; idxFolder++)
+			onForceWear(folders.at(idxFolder), eBhvr);
 
 		// If we're not executing a command then we're a delayed callback and need to manually call done()
 		if ( (!getCurrentCommand()) && (RlvForceWear::instanceExists()) )
@@ -1985,9 +2071,9 @@ ERlvCmdRet RlvHandler::onFindFolder(const RlvCommand& rlvCmd, std::string& strRe
 			// We need to return an "in depth" result so whoever has the most '/' is our lucky winner
 			// (maxSlashes needs to be initialized to -1 since children of the #RLV folder won't have '/' in their shared path)
 			int maxSlashes = -1, curSlashes; std::string strFolderName;
-			for (S32 idxFolder = 0, cntFolder = folders.count(); idxFolder < cntFolder; idxFolder++)
+			for (S32 idxFolder = 0, cntFolder = folders.size(); idxFolder < cntFolder; idxFolder++)
 			{
-				strFolderName = RlvInventory::instance().getSharedPath(folders.get(idxFolder));
+				strFolderName = RlvInventory::instance().getSharedPath(folders.at(idxFolder));
 
 				curSlashes = std::count(strFolderName.begin(), strFolderName.end(), '/');
 				if (curSlashes > maxSlashes)
@@ -1999,11 +2085,11 @@ ERlvCmdRet RlvHandler::onFindFolder(const RlvCommand& rlvCmd, std::string& strRe
 		}
 		else if (RLV_BHVR_FINDFOLDERS == rlvCmd.getBehaviourType())
 		{
-			for (S32 idxFolder = 0, cntFolder = folders.count(); idxFolder < cntFolder; idxFolder++)
+			for (S32 idxFolder = 0, cntFolder = folders.size(); idxFolder < cntFolder; idxFolder++)
 			{
 				if (!strReply.empty())
 					strReply.push_back(',');
-				strReply += RlvInventory::instance().getSharedPath(folders.get(idxFolder));
+				strReply += RlvInventory::instance().getSharedPath(folders.at(idxFolder));
 			}
 		}
 	}
@@ -2101,15 +2187,15 @@ ERlvCmdRet RlvHandler::onGetInv(const RlvCommand& rlvCmd, std::string& strReply)
 	if (!pFolders)
 		return RLV_RET_FAILED;
 
-	for (S32 idxFolder = 0, cntFolder = pFolders->count(); idxFolder < cntFolder; idxFolder++)
+	for (S32 idxFolder = 0, cntFolder = pFolders->size(); idxFolder < cntFolder; idxFolder++)
 	{
 		// Return all folders that:
 		//   - aren't hidden
 		//   - aren't a folded folder (only really matters when "Enable Legacy Naming" is enabled - see related blog post)
 		//     (we can skip checking for .<composite> folders since the ones we'll want to hide start with '.' anyway)
-		const std::string& strFolder = pFolders->get(idxFolder)->getName();
+		const std::string& strFolder = pFolders->at(idxFolder)->getName();
 		if ( (!strFolder.empty()) && (RLV_FOLDER_PREFIX_HIDDEN != strFolder[0]) && 
-			 (!RlvInventory::isFoldedFolder(pFolders->get(idxFolder).get(), false)) )
+			 (!RlvInventory::isFoldedFolder(pFolders->at(idxFolder).get(), false)) )
 		{
 			if (!strReply.empty())
 				strReply.push_back(',');
@@ -2135,21 +2221,21 @@ ERlvCmdRet RlvHandler::onGetInvWorn(const RlvCommand& rlvCmd, std::string& strRe
 	// Collect everything @attachall would be attaching
 	LLInventoryModel::cat_array_t folders; LLInventoryModel::item_array_t items;
 	RlvWearableItemCollector f(pFolder, RlvForceWear::ACTION_WEAR_REPLACE, RlvForceWear::FLAG_MATCHALL);
-	gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, f, TRUE);
+	gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, f, true);
 
 	rlv_wear_info wi = {0};
 
 	// Add all the folders to a lookup map 
 	std::map<LLUUID, rlv_wear_info> mapFolders;
 	mapFolders.insert(std::pair<LLUUID, rlv_wear_info>(pFolder->getUUID(), wi));
-	for (S32 idxFolder = 0, cntFolder = folders.count(); idxFolder < cntFolder; idxFolder++)
-		mapFolders.insert(std::pair<LLUUID, rlv_wear_info>(folders.get(idxFolder)->getUUID(), wi));
+	for (S32 idxFolder = 0, cntFolder = folders.size(); idxFolder < cntFolder; idxFolder++)
+		mapFolders.insert(std::pair<LLUUID, rlv_wear_info>(folders.at(idxFolder)->getUUID(), wi));
 
 	// Iterate over all the found items
 	LLViewerInventoryItem* pItem; std::map<LLUUID, rlv_wear_info>::iterator itFolder;
-	for (S32 idxItem = 0, cntItem = items.count(); idxItem < cntItem; idxItem++)
+	for (S32 idxItem = 0, cntItem = items.size(); idxItem < cntItem; idxItem++)
 	{
-		pItem = items.get(idxItem);
+		pItem = items.at(idxItem);
 		if (!RlvForceWear::isWearableItem(pItem))
 			continue;
 
@@ -2285,15 +2371,15 @@ ERlvCmdRet RlvHandler::onGetPath(const RlvCommand& rlvCmd, std::string& strReply
 	{
 		if (RLV_BHVR_GETPATH == rlvCmd.getBehaviourType())
 		{
-			strReply = RlvInventory::instance().getSharedPath(folders.get(0));
+			strReply = RlvInventory::instance().getSharedPath(folders.at(0));
 		}
 		else if (RLV_BHVR_GETPATHNEW == rlvCmd.getBehaviourType())
 		{
-			for (S32 idxFolder = 0, cntFolder = folders.count(); idxFolder < cntFolder; idxFolder++)
+			for (S32 idxFolder = 0, cntFolder = folders.size(); idxFolder < cntFolder; idxFolder++)
 			{
 				if (!strReply.empty())
 					strReply.push_back(',');
-				strReply += RlvInventory::instance().getSharedPath(folders.get(idxFolder));
+				strReply += RlvInventory::instance().getSharedPath(folders.at(idxFolder));
 			}
 		}
 	}

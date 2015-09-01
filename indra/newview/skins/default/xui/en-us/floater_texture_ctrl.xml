@@ -54,11 +54,19 @@
 	<line_editor bevel_style="in" border_style="line" border_thickness="1" bottom="-345"
 	     left="8" follows="bottom|left" font="SansSerif" handle_edit_keys_directly="false"
 	     height="20" max_length="36" mouse_opaque="true" name="texture_uuid"
-	     select_all_on_focus_received="false" width="230" />
+	     select_all_on_focus_received="false" width="250" />
 	<button enabled="true" follows="left|bottom" font="SansSerif"
 	     height="20" label="Apply UUID" label_selected="Apply UUID"
-	     left="238" bottom="-345" mouse_opaque="true" 
-	     name="ApplyUUID" scale_image="true" width="100" />
+	     left="263" bottom="-345" mouse_opaque="true"
+	     name="ApplyUUID" scale_image="true" width="80" />
+  <button enabled="true" follows="left|bottom" font="SansSerif"
+	     height="20" label="Copy" label_selected="Copy"
+	     left="348" bottom="-345" mouse_opaque="true"
+	     name="CopyUUID" scale_image="true" width="45" />
+  <button enabled="true" follows="left|bottom" font="SansSerif"
+	     height="20" label="Paste" label_selected="Paste"
+	     left="398" bottom="-345" mouse_opaque="true"
+	     name="PasteUUID" scale_image="true" width="48" />
 	<string name="pick title">
 		Pick:
 	</string>

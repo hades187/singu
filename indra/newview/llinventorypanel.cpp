@@ -145,7 +145,8 @@ LLInventoryPanel::LLInventoryPanel(const std::string& name,
 	mInventory(inventory),
 	mAllowMultiSelect(allow_multi_select),
 	mViewsInitialized(false),
-	mInvFVBridgeBuilder(NULL)
+	mInvFVBridgeBuilder(NULL),
+	mGroupedItemBridge(new LLFolderViewGroupedItemBridge)
 {
 	mInvFVBridgeBuilder = &INVENTORY_BRIDGE_BUILDER;
 
@@ -172,14 +173,14 @@ void LLInventoryPanel::buildFolderView()
 	else
 	{
 		root_id = (preferred_type != LLFolderType::FT_NONE)
-				? gInventory.findCategoryUUIDForType(preferred_type, false, false)
+				? gInventory.findCategoryUUIDForType(preferred_type, false)
 				: gInventory.getCategory(static_cast<LLUUID>(mStartFolder)) ? static_cast<LLUUID>(mStartFolder) // Singu Note: if start folder is an id of a folder, use it
 				: LLUUID::null;
 	}
 
 	if ((root_id == LLUUID::null) && !mStartFolder.empty())
 	{
-		llwarns << "No category found that matches start_folder: " << mStartFolder << llendl;
+		LL_WARNS() << "No category found that matches start_folder: " << mStartFolder << LL_ENDL;
 		root_id = LLUUID::generateNewID();
 	}
 
@@ -695,7 +696,8 @@ LLFolderView * LLInventoryPanel::createFolderView(LLInvFVBridge * bridge, bool u
 	folder_rect, 
 	LLUUID::null, 
 	this, 
-	bridge);
+	bridge,
+	mGroupedItemBridge);
 	ret->setAllowMultiSelect(mAllowMultiSelect);
 	return ret;
 }
@@ -744,9 +746,9 @@ LLFolderViewItem* LLInventoryPanel::buildNewViews(const LLUUID& id)
   			if (objectp->getType() <= LLAssetType::AT_NONE ||
   				objectp->getType() >= LLAssetType::AT_COUNT)
   			{
-  				llwarns << "LLInventoryPanel::buildNewViews called with invalid objectp->mType : "
+  				LL_WARNS() << "LLInventoryPanel::buildNewViews called with invalid objectp->mType : "
   						<< ((S32) objectp->getType()) << " name " << objectp->getName() << " UUID " << objectp->getUUID()
-  						<< llendl;
+  						<< LL_ENDL;
   				return NULL;
   			}
   		
@@ -1082,7 +1084,7 @@ LLInventoryPanel* LLInventoryPanel::getActiveInventoryPanel(BOOL auto_open)
 	LLInventoryView* floater_inventory = LLInventoryView::getActiveInventory();
 	if (!floater_inventory)
 	{
-		llwarns << "Could not find My Inventory floater" << llendl;
+		LL_WARNS() << "Could not find My Inventory floater" << LL_ENDL;
 		return FALSE;
 	}
 	res = floater_inventory ? floater_inventory->getActivePanel() : NULL;

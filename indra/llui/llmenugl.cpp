@@ -158,7 +158,7 @@ LLMenuItemGL::LLMenuItemGL( const std::string& name, const std::string& label, K
 
 LLMenuItemGL::~LLMenuItemGL()
 {
-	lldebugs << "Menu destroyed:" << this->getName() << llendl;
+	LL_DEBUGS() << "Menu destroyed:" << this->getName() << LL_ENDL;
 };
 
 // virtual
@@ -342,7 +342,7 @@ void LLMenuItemGL::setJumpKey(KEY key)
 // virtual 
 U32 LLMenuItemGL::getNominalHeight( void ) const 
 { 
-	return llmath::llround(mFont->getLineHeight()) + MENU_ITEM_PADDING;
+	return ll_round(mFont->getLineHeight()) + MENU_ITEM_PADDING;
 }
 
 //virtual
@@ -564,8 +564,9 @@ void LLMenuItemGL::draw( void )
 		std::string::size_type offset = upper_case_label.find(mJumpKey);
 		if (offset != std::string::npos)
 		{
-			S32 x_begin = LEFT_PLAIN_PIXELS + mFont->getWidth(mLabel, 0, offset);
-			S32 x_end = LEFT_PLAIN_PIXELS + mFont->getWidth(mLabel, 0, offset + 1);
+			const LLWString& utf32text = mLabel.getWString();
+			S32 x_begin = LEFT_PLAIN_PIXELS + mFont->getWidth(utf32text, 0, offset);
+			S32 x_end = LEFT_PLAIN_PIXELS + mFont->getWidth(utf32text, 0, offset + 1);
 			gl_line_2d(x_begin, (MENU_ITEM_PADDING / 2) + 1, x_end, (MENU_ITEM_PADDING / 2) + 1);
 		}
 	}
@@ -1159,7 +1160,7 @@ void LLMenuItemToggleGL::buildDrawLabel( void )
 void LLMenuItemToggleGL::onCommit( void )
 {
 	getMenu()->setItemLastSelected( this );
-	//llinfos << "LLMenuItemToggleGL::onCommit " << mLabel.c_str() << llendl;
+	//LL_INFOS() << "LLMenuItemToggleGL::onCommit " << mLabel.c_str() << LL_ENDL;
 	*mToggle = !(*mToggle);
 	buildDrawLabel();
 	LLMenuItemGL::onCommit();
@@ -1173,7 +1174,7 @@ LLMenuItemBranchGL::LLMenuItemBranchGL( const std::string& name, const std::stri
 	LLMenuGL* branch = dynamic_cast<LLMenuGL*>(branch_handle.get());
 	if(!branch)
 	{
-		llerrs << "Non-menu handle passed as branch reference." << llendl;
+		LL_ERRS() << "Non-menu handle passed as branch reference." << LL_ENDL;
 	}
 
 	if (branch)
@@ -1392,7 +1393,7 @@ void LLMenuItemBranchGL::handleVisibilityChange( BOOL new_visibility )
 {
 	if (new_visibility == FALSE && getBranch() && !getBranch()->getTornOff())
 	{
-		lldebugs << "Forcing branch to visible. Menu: " << getName() << " Branch: " << getBranch()->getName() << llendl;
+		LL_DEBUGS() << "Forcing branch to visible. Menu: " << getName() << " Branch: " << getBranch()->getName() << LL_ENDL;
 		getBranch()->setVisible(FALSE);
 	}
 	LLMenuItemGL::handleVisibilityChange(new_visibility);
@@ -1826,9 +1827,10 @@ void LLMenuItemBranchDownGL::draw( void )
 		std::string::size_type offset = upper_case_label.find(getJumpKey());
 		if (offset != std::string::npos)
 		{
-			S32 x_offset = llmath::llround((F32)getRect().getWidth() / 2.f - getFont()->getWidthF32(mLabel.getString(), 0, S32_MAX) / 2.f);
-			S32 x_begin = x_offset + getFont()->getWidth(mLabel, 0, offset);
-			S32 x_end = x_offset + getFont()->getWidth(mLabel, 0, offset + 1);
+			const LLWString& utf32text = mLabel.getWString();
+			S32 x_offset = ll_round((F32)getRect().getWidth() / 2.f - getFont()->getWidthF32(utf32text, 0, S32_MAX) / 2.f);
+			S32 x_begin = x_offset + getFont()->getWidth(utf32text, 0, offset);
+			S32 x_end = x_offset + getFont()->getWidth(utf32text, 0, offset + 1);
 			gl_line_2d(x_begin, LABEL_BOTTOM_PAD_PIXELS, x_end, LABEL_BOTTOM_PAD_PIXELS);
 		}
 	}
@@ -2212,7 +2214,7 @@ void LLMenuGL::parseChildXML(LLXMLNodePtr child, LLView *parent, LLUICtrlFactory
 
 						if (!callback)
 						{
-							lldebugs << "Ignoring \"on_check\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << llendl;
+							LL_DEBUGS() << "Ignoring \"on_check\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << LL_ENDL;
 							continue;
 						}
 
@@ -2257,7 +2259,7 @@ void LLMenuGL::parseChildXML(LLXMLNodePtr child, LLView *parent, LLUICtrlFactory
 
 				if (!callback)
 				{
-					lldebugs << "Ignoring \"on_click\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << llendl;
+					LL_DEBUGS() << "Ignoring \"on_click\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << LL_ENDL;
 					continue;
 				}
 
@@ -2291,7 +2293,7 @@ void LLMenuGL::parseChildXML(LLXMLNodePtr child, LLView *parent, LLUICtrlFactory
 
 					if (!callback)
 					{
-						lldebugs << "Ignoring \"on_enable\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << llendl;
+						LL_DEBUGS() << "Ignoring \"on_enable\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << LL_ENDL;
 						continue;
 					}
 
@@ -2335,7 +2337,7 @@ void LLMenuGL::parseChildXML(LLXMLNodePtr child, LLView *parent, LLUICtrlFactory
 
 					if (!callback)
 					{
-						lldebugs << "Ignoring \"on_visible\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << llendl;
+						LL_DEBUGS() << "Ignoring \"on_visible\" \"" << item_name << "\" because \"" << callback_name << "\" is not registered" << LL_ENDL;
 						continue;
 					}
 
@@ -2364,17 +2366,17 @@ bool LLMenuGL::addChild(LLView* view, S32 tab_group)
 {
 	if (LLMenuGL* menup = dynamic_cast<LLMenuGL*>(view))
 	{
-		lldebugs << "Adding menu " << menup->getName() << " to " << getName() << llendl;
+		LL_DEBUGS() << "Adding menu " << menup->getName() << " to " << getName() << LL_ENDL;
 		appendMenu(menup);
 		return true;
 	}
 	else if (LLMenuItemGL* itemp = dynamic_cast<LLMenuItemGL*>(view))
 	{
-		lldebugs << "Adding " << itemp->getName() << " to " << getName() << llendl;
+		LL_DEBUGS() << "Adding " << itemp->getName() << " to " << getName() << LL_ENDL;
 		append(itemp);
 		return true;
 	}
-	lldebugs << "Error adding unknown child '"<<(view ? view->getName() : std::string("NULL")) << "' to " << getName() << llendl;
+	LL_DEBUGS() << "Error adding unknown child '"<<(view ? view->getName() : std::string("NULL")) << "' to " << getName() << LL_ENDL;
 	return false;
 }
 
@@ -2617,7 +2619,7 @@ bool LLMenuGL::scrollItems(EScrollingDirection direction)
 	}
 	default:
 		//LL_WARNS() << "Unknown scrolling direction: " << direction << LL_ENDL;
-		llwarns << "Unknown scrolling direction: " << direction << llendl;
+		LL_WARNS() << "Unknown scrolling direction: " << direction << LL_ENDL;
 	}
 
 	mNeedsArrange = TRUE;
@@ -2660,7 +2662,7 @@ void LLMenuGL::arrange( void )
 
 		// *FIX: create the item first and then ask for its dimensions?
 		S32 spillover_item_width = PLAIN_PAD_PIXELS + LLFontGL::getFontSansSerif()->getWidth( std::string("More") ); // *TODO: Translate
-		S32 spillover_item_height = llmath::llround(LLFontGL::getFontSansSerif()->getLineHeight()) + MENU_ITEM_PADDING;
+		S32 spillover_item_height = ll_round(LLFontGL::getFontSansSerif()->getLineHeight()) + MENU_ITEM_PADDING;
 
 		// Scrolling support
 		item_list_t::iterator first_visible_item_iter;
@@ -3212,8 +3214,8 @@ BOOL LLMenuGL::appendMenu( LLMenuGL* menu )
 {
 	if( menu == this )
 	{
-		llerrs << "** Attempt to attach menu to itself. This is certainly "
-			   << "a logic error." << llendl;
+		LL_ERRS() << "** Attempt to attach menu to itself. This is certainly "
+			   << "a logic error." << LL_ENDL;
 	}
 	BOOL success = TRUE;
 
@@ -3588,8 +3590,8 @@ BOOL LLMenuGL::handleHover( S32 x, S32 y, MASK mask )
 	LLVector2 mouse_avg_dir((F32)mMouseVelX, (F32)mMouseVelY);
 	mouse_avg_dir.normVec();
 	F32 interp = 0.5f * (llclamp(mouse_dir * mouse_avg_dir, 0.f, 1.f));
-	mMouseVelX = llmath::llround(lerp((F32)mouse_delta_x, (F32)mMouseVelX, interp));
-	mMouseVelY = llmath::llround(lerp((F32)mouse_delta_y, (F32)mMouseVelY, interp));
+	mMouseVelX = ll_round(lerp((F32)mouse_delta_x, (F32)mMouseVelX, interp));
+	mMouseVelY = ll_round(lerp((F32)mouse_delta_y, (F32)mMouseVelY, interp));
 	mLastMouseX = x;
 	mLastMouseY = y;
 
@@ -3705,7 +3707,7 @@ void LLMenuGL::setVisible(BOOL visible)
 	{
 		if (!visible)
 		{
-			lldebugs << "Hiding " << getName() << llendl;
+			LL_DEBUGS() << "Hiding " << getName() << LL_ENDL;
 			mFadeTimer.start();
 			clearHoverItem();
 			// reset last known mouse coordinates so
@@ -3715,7 +3717,7 @@ void LLMenuGL::setVisible(BOOL visible)
 		}
 		else
 		{ 
-			lldebugs << "Showing " << getName() << llendl;
+			LL_DEBUGS() << "Showing " << getName() << LL_ENDL;
 			mHasSelection = true;
 			mFadeTimer.stop();
 		}
@@ -3741,7 +3743,7 @@ LLMenuGL* LLMenuGL::getChildMenuByName(const std::string& name, BOOL recurse) co
 			return menup;
 		}
 	}
-	llwarns << "Child Menu " << name << " not found in menu " << getName() << llendl;
+	LL_WARNS() << "Child Menu " << name << " not found in menu " << getName() << LL_ENDL;
 	return NULL;
 }
 
@@ -4050,11 +4052,11 @@ void LLMenuBarGL::setVisible(BOOL visible)
 	{
 		if(!visible)
 		{
-			lldebugs << "Hiding " << getName() << llendl;
+			LL_DEBUGS() << "Hiding " << getName() << LL_ENDL;
 		}
 		else
 		{
-			lldebugs << "Showing " << getName() << llendl;
+			LL_DEBUGS() << "Showing " << getName() << LL_ENDL;
 		}
 	}
 	LLUICtrl::setVisible(visible);
@@ -4166,8 +4168,8 @@ BOOL LLMenuBarGL::appendMenu( LLMenuGL* menu )
 {
 	if( menu == this )
 	{
-		llerrs << "** Attempt to attach menu to itself. This is certainly "
-			   << "a logic error." << llendl;
+		LL_ERRS() << "** Attempt to attach menu to itself. This is certainly "
+			   << "a logic error." << LL_ENDL;
 	}
 
 	BOOL success = TRUE;
@@ -4884,7 +4886,6 @@ BOOL LLContextMenu::handleHoverOver(LLMenuItemGL* item, S32 x, S32 y)
 	if (item && item->getEnabled())
 	{
 		getWindow()->setCursor(UI_CURSOR_ARROW);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << llendl;
 		handled = TRUE;
 
 		if (item != mHoverItem)
@@ -4911,7 +4912,6 @@ BOOL LLContextMenu::handleHoverOver(LLMenuItemGL* item, S32 x, S32 y)
 	if( !handled && pointInView( x, y ) )
 	{
 		getWindow()->setCursor(UI_CURSOR_ARROW);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << llendl;
 		handled = TRUE;
 	}
 
@@ -4987,7 +4987,7 @@ BOOL LLContextMenu::appendContextSubMenu(LLContextMenu* menu)
 {
 	if (menu == this)
 	{
-		llerrs << "Can't attach a context menu to itself" << llendl;
+		LL_ERRS() << "Can't attach a context menu to itself" << LL_ENDL;
 	}
 	LLContextMenuBranch* item = new LLContextMenuBranch(menu->getName(), menu->getLabel(), menu);
 	getParent()->addChild(item->getBranch());

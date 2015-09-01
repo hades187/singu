@@ -185,7 +185,7 @@ BOOL LLFloaterLandmark::handleDragAndDrop(
 	}
 
 	handled = TRUE;
-	lldebugst(LLERR_USER_INPUT) << "dragAndDrop handled by LLFloaterLandmark " << getName() << llendl;
+	LL_DEBUGS("UserInput") << "dragAndDrop handled by LLFloaterLandmark " << getName() << LL_ENDL;
 
 	return handled;
 }
@@ -244,10 +244,10 @@ const LLUUID& LLFloaterLandmark::findItemID(const LLUUID& asset_id, BOOL copyabl
 							LLInventoryModel::INCLUDE_TRASH,
 							asset_id_matches);
 
-	if (items.count())
+	if (items.size())
 	{
 		// search for copyable version first
-		for (S32 i = 0; i < items.count(); i++)
+		for (U32 i = 0; i < items.size(); i++)
 		{
 			LLInventoryItem* itemp = items[i];
 			LLPermissions item_permissions = itemp->getPermissions();
@@ -291,13 +291,13 @@ void LLFloaterLandmark::onBtnNew()
 	LLViewerRegion* agent_region = gAgent.getRegion();
 	if(!agent_region)
 	{
-		llwarns << "No agent region" << llendl;
+		LL_WARNS() << "No agent region" << LL_ENDL;
 		return;
 	}
 	LLParcel* agent_parcel = LLViewerParcelMgr::getInstance()->getAgentParcel();
 	if (!agent_parcel)
 	{
-		llwarns << "No agent parcel" << llendl;
+		LL_WARNS() << "No agent parcel" << LL_ENDL;
 		return;
 	}
 	if (!agent_parcel->getAllowLandmark()
@@ -352,15 +352,6 @@ void LLFloaterLandmark::onBtnDelete()
 			gInventory.notifyObservers();
 		}
 	}
-
-	// Delete the item entirely
-	/*
-	item->removeFromServer();
-	gInventory.deleteObject(item->getUUID());
-	gInventory.notifyObservers();
-	*/
-
-
 }
 
 void LLFloaterLandmark::onBtnRename()

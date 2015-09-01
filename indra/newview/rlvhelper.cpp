@@ -15,21 +15,18 @@
  */
 
 #include "llviewerprecompiledheaders.h"
-#include "llagent.h"
-#include "llagentwearables.h"
 #include "llappearancemgr.h"
 #include "llattachmentsmgr.h"
 #include "llgesturemgr.h"
 #include "llnotificationsutil.h"
-#include "llviewerobject.h"
 #include "llviewerobjectlist.h"
-#include "llwlparammanager.h"
 
 #include "rlvhelper.h"
 #include "rlvhandler.h"
 #include "rlvinventory.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
 // ============================================================================
 // RlvCommmand
@@ -163,13 +160,17 @@ void RlvCommand::initLookupTable()
 				"unsharedwear", "unsharedunwear", "emote", "sendchat", "recvchat", "recvchatfrom", "recvemote", "recvemotefrom",
 				"redirchat", "rediremote", "chatwhisper", "chatnormal", "chatshout", "sendchannel", "sendim", "sendimto",
 				"recvim", "recvimfrom", "startim", "startimto", "permissive", "notify", "showinv", "showminimap", "showworldmap", "showloc",
-				"shownames", "showhovertext", "showhovertexthud", "showhovertextworld", "showhovertextall", "tplm", "tploc", "tplure", "tprequest",
+				"shownames", "shownametags", "showhovertext", "showhovertexthud", "showhovertextworld", "showhovertextall", "tplm", "tploc", "tplure", "tprequest",
 				"viewnote", "viewscript", "viewtexture", "acceptpermission", "accepttp", "accepttprequest", "allowidle", "edit", "editobj", "rez",
 				"fartouch", "interact", "touchthis", "touchattach", "touchattachself", "touchattachother", "touchhud", "touchworld", "touchall",
 				"touchme", "fly", "setgroup", "unsit", "sit", "sittp", "standtp", "setdebug", "setenv", "alwaysrun", "temprun", "detachme", 
 				"attachover", "attachthis", "attachthisover", "attachthis_except", "detachthis", "detachthis_except", "attachall", 
 				"attachallover", "detachall", "attachallthis", "attachallthis_except", "attachallthisover", "detachallthis", 
-				"detachallthis_except", "adjustheight", "tpto", "version", "versionnew", "versionnum", "getattach", "getattachnames", 
+				"detachallthis_except", "adjustheight", "camzoommax", "camzoommin", "camdistmax", "camdistmin",
+				// Singu TODO: Implement the RLV 2.9 graphics options and remove TODO from their strings so they work (and report as working)
+				// If there is work to be done immediately after these is toggled, add to the onToggleCamXXX section in rlvui.cpp
+				"TODOcamdrawmax", "TODOcamdrawmin", "TODOcamdrawalphamax", "TODOcamdrawalphamin", "TODOcamdrawcolor", "camunlock", "camavdist", "TODOcamtextures",
+				"tpto", "version", "versionnew", "versionnum", "getattach", "getattachnames",
 				"getaddattachnames", "getremattachnames", "getoutfit", "getoutfitnames", "getaddoutfitnames", "getremoutfitnames", 
 				"findfolder", "findfolders", "getpath", "getpathnew", "getinv", "getinvworn", "getgroup", "getsitid", "getcommand", 
 				"getstatus", "getstatusall"
@@ -332,6 +333,25 @@ bool RlvCommandOptionGetPath::getItemIDs(LLWearableType::EType wtType, uuid_vec_
 	return (cntItemsPrev != idItems.size());
 }
 
+// Checked: 2015-03-30 (RLVa-1.5.0)
+RlvCommandOptionAdjustHeight::RlvCommandOptionAdjustHeight(const RlvCommand& rlvCmd)
+	: m_nPelvisToFoot(0.0f), m_nPelvisToFootDeltaMult(0.0f), m_nPelvisToFootOffset(0.0f)
+{
+	std::vector<std::string> cmdTokens;
+	boost::split(cmdTokens, rlvCmd.getOption(), boost::is_any_of(std::string(";")));
+	if (1 == cmdTokens.size())
+	{
+		m_fValid = (LLStringUtil::convertToF32(cmdTokens[0], m_nPelvisToFootOffset));
+		m_nPelvisToFootOffset /= 100;
+	}
+	else if ( (2 <= cmdTokens.size()) && (cmdTokens.size() <= 3) )
+	{
+		m_fValid = (LLStringUtil::convertToF32(cmdTokens[0], m_nPelvisToFoot)) &&
+			 (LLStringUtil::convertToF32(cmdTokens[1], m_nPelvisToFootDeltaMult)) && 
+			 ( (2 == cmdTokens.size()) || (LLStringUtil::convertToF32(cmdTokens[2], m_nPelvisToFootOffset)) );
+	}
+}
+
 // Checked: 2011-03-28 (RLVa-1.3.0f) | Added: RLVa-1.3.0f
 RlvCommandOptionTpTo::RlvCommandOptionTpTo(const RlvCommand &rlvCmd)
 {
@@ -478,15 +498,15 @@ void RlvForceWear::forceFolder(const LLViewerInventoryCategory* pFolder, EWearAc
 	// Grab a list of all the items we'll be wearing/attaching
 	LLInventoryModel::cat_array_t folders; LLInventoryModel::item_array_t items;
 	RlvWearableItemCollector f(pFolder, eAction, eFlags);
-	gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, f, TRUE);
+	gInventory.collectDescendentsIf(pFolder->getUUID(), folders, items, FALSE, f, true);
 
 	// TRUE if we've already encountered this LLWearableType::EType (used only on wear actions and only for AT_CLOTHING)
 	bool fSeenWType[LLWearableType::WT_COUNT] = { false };
 
 	EWearAction eCurAction = eAction;
-	for (S32 idxItem = 0, cntItem = items.count(); idxItem < cntItem; idxItem++)
+	for (S32 idxItem = 0, cntItem = items.size(); idxItem < cntItem; idxItem++)
 	{
-		LLViewerInventoryItem* pRlvItem = items.get(idxItem);
+		LLViewerInventoryItem* pRlvItem = items.at(idxItem);
 		LLViewerInventoryItem* pItem = (LLAssetType::AT_LINK == pRlvItem->getActualType()) ? pRlvItem->getLinkedItem() : pRlvItem;
 
 		// If it's wearable it should be worn on detach
@@ -887,7 +907,35 @@ void RlvForceWear::remWearable(const LLViewerWearable* pWearable)
 		m_remWearables.push_back(pWearable);
 }
 
-// Checked: 2010-09-18 (RLVa-1.2.1)
+// Checked: 2015-05-05 (RLVa-1.4.12)
+void RlvForceWear::updatePendingAttachments()
+{
+	if (RlvForceWear::instanceExists())
+	{
+		RlvForceWear* pThis = RlvForceWear::getInstance();
+		BOOST_FOREACH(const pendingattachments_map_t::value_type& itAttach, pThis->m_pendingAttachments)
+			LLAttachmentsMgr::instance().addAttachment(itAttach.first, itAttach.second & ~ATTACHMENT_ADD, itAttach.second & ATTACHMENT_ADD);
+		pThis->m_pendingAttachments.clear();
+	}
+}
+
+// Checked: 2015-05-05 (RLVa-1.4.12)
+void RlvForceWear::addPendingAttachment(const LLUUID& idItem, U8 idxPoint)
+{
+	pendingattachments_map_t::iterator itAttach = m_pendingAttachments.find(idItem);
+	if (m_pendingAttachments.end() == itAttach)
+		m_pendingAttachments.insert(std::make_pair(idItem, idxPoint));
+	else
+		itAttach->second = idxPoint;
+}
+
+// Checked: 2015-05-05 (RLVa-1.4.12)
+void RlvForceWear::remPendingAttachment(const LLUUID& idItem)
+{
+	m_pendingAttachments.erase(idItem);
+}
+
+// Checked: 2015-05-05 (RLVa-1.4.12)
 void RlvForceWear::done()
 {
 	// Sanity check - don't go through all the motions below only to find out there's nothing to actually do
@@ -897,41 +945,35 @@ void RlvForceWear::done()
 		return;
 	}
 
-	LLAppearanceMgr* pAppearanceMgr = LLAppearanceMgr::getInstance();
-	
 	//
 	// Process removals
 	//
 
+	uuid_vec_t remItems;
+
 	// Wearables
 	if (m_remWearables.size())
 	{
-		for (std::list<const LLViewerWearable*>::const_iterator itWearable = m_remWearables.begin(); itWearable != m_remWearables.end(); ++itWearable)
-			pAppearanceMgr->removeItemFromAvatar((*itWearable)->getItemID());
+		BOOST_FOREACH(const LLViewerWearable* pWearable, m_remWearables)
+			remItems.push_back(pWearable->getItemID());
 		m_remWearables.clear();
 	}
 
 	// Gestures
 	if (m_remGestures.size())
 	{
-		// NOTE: LLGestureMgr::deactivateGesture() will call LLAppearanceMgr::removeCOFItemLinks() for us
-		for (S32 idxItem = 0, cntItem = m_remGestures.count(); idxItem < cntItem; idxItem++)
-			LLGestureMgr::instance().deactivateGesture(m_remGestures.get(idxItem)->getUUID());
+		// NOTE: LLGestureMgr::deactivateGesture() will call LLAppearanceMgr::removeCOFItemLinks() for us and supply its own callback
+		BOOST_FOREACH(const LLViewerInventoryItem* pItem, m_remGestures)
+			LLGestureMgr::instance().deactivateGesture(pItem->getUUID());
 		m_remGestures.clear();
 	}
 
 	// Attachments
 	if (m_remAttachments.size())
 	{
-		// Don't bother with COF if all we're doing is detaching some attachments (keeps people from rebaking on every @remattach=force)
 		LLAgentWearables::userRemoveMultipleAttachments(m_remAttachments);
-
-		for (std::vector<LLViewerObject*>::const_iterator itAttachObj = m_remAttachments.begin(); 
-				itAttachObj != m_remAttachments.end(); ++itAttachObj)
-		{
-			pAppearanceMgr->removeCOFItemLinks((*itAttachObj)->getAttachmentItemID());
-		}
-
+		BOOST_FOREACH(const LLViewerObject* pAttachObj, m_remAttachments)
+			remItems.push_back(pAttachObj->getAttachmentItemID());
 		m_remAttachments.clear();
 	}
 
@@ -943,48 +985,49 @@ void RlvForceWear::done()
 	LLInventoryModel::item_array_t addBodyParts, addClothing;
 	for (addwearables_map_t::const_iterator itAddWearables = m_addWearables.begin(); itAddWearables != m_addWearables.end(); ++itAddWearables)
 	{
-		const LLInventoryModel::item_array_t& wearItems = itAddWearables->second;
-		for (S32 idxItem = 0, cntItem = wearItems.count(); idxItem < cntItem; idxItem++)
+		// NOTE: LLAppearanceMgr will filter our duplicates so no need for us to check here
+		BOOST_FOREACH(LLViewerInventoryItem* pItem, itAddWearables->second)
 		{
-			LLViewerInventoryItem* pItem = wearItems.get(idxItem);
-			if (!pAppearanceMgr->isLinkInCOF(pItem->getUUID()))		// It's important to examine COF here and *not* gAgentWearables
-			{
-				if (LLAssetType::AT_BODYPART == pItem->getType())
-					addBodyParts.push_back(pItem);
-				else
-					addClothing.push_back(pItem);
-			}
+			if (LLAssetType::AT_BODYPART == pItem->getType())
+				addBodyParts.push_back(pItem);
+			else
+				addClothing.push_back(pItem);
 		}
 	}
 	m_addWearables.clear();
 
 	// Until LL provides a way for updateCOF to selectively attach add/replace we have to deal with attachments ourselves
-	for (addattachments_map_t::const_iterator itAddAttachments = m_addAttachments.begin(); 
-			itAddAttachments != m_addAttachments.end(); ++itAddAttachments)
+	for (addattachments_map_t::const_iterator itAddAttachments = m_addAttachments.begin(); itAddAttachments != m_addAttachments.end(); ++itAddAttachments)
 	{
-		const LLInventoryModel::item_array_t& wearItems = itAddAttachments->second;
-		for (S32 idxItem = 0, cntItem = wearItems.count(); idxItem < cntItem; idxItem++)
-		{
-			const LLUUID& idItem = wearItems.get(idxItem)->getLinkedUUID();
-			if (gAgentAvatarp->attachmentWasRequested(idItem))
-				continue;
-			gAgentAvatarp->addAttachmentRequest(idItem);
-
-			LLAttachmentsMgr::instance().addAttachment(idItem, itAddAttachments->first & ~ATTACHMENT_ADD, itAddAttachments->first & ATTACHMENT_ADD);
-		}
+		BOOST_FOREACH(const LLViewerInventoryItem* pItem, itAddAttachments->second)
+			addPendingAttachment(pItem->getLinkedUUID(), itAddAttachments->first);
 	}
 	m_addAttachments.clear();
 
-	// If there are additions we need to call LLAppearanceManager::updateCOF(), otherwise LLAppearanceManager::updateAppearanceFromCOF()
+	//
+	// Tie it all together
+	//
+
+	//          |    Wearables    |   Attachments    |   Gestures      |
+	//          |======================================================|
+	// Add    : | LLAppearanceMgr | <custom>         | LLAppearanceMgr |
+	// Remove : | LLAppearanceMgr | LLAppearanceMgr  | LLGestureMgr    |
+	LLPointer<LLInventoryCallback> cb = new LLUpdateAppearanceOnDestroy(false, false, boost::bind(RlvForceWear::updatePendingAttachments));
+
+	if (!remItems.empty())
+	{
+		LLAppearanceMgr::instance().removeItemsFromAvatar(remItems, cb, true);
+	}
+
 	if ( (!addBodyParts.empty()) || (!addClothing.empty()) || (!m_addGestures.empty()) )
 	{
 		LLInventoryModel::item_array_t addAttachments;
-		pAppearanceMgr->updateCOF(addBodyParts, addClothing, addAttachments, m_addGestures, true);
+		LLAppearanceMgr::instance().updateCOF(addBodyParts, addClothing, addAttachments, m_addGestures, true, LLUUID::null, cb);
 
 		m_addGestures.clear();
 	}
 
-	// Since RlvForceWear is a singleton now we want to be sure there aren't any leftovers
+	// Make sure there are no leftovers for the next cycle
 	RLV_ASSERT( (m_remWearables.empty()) && (m_remAttachments.empty()) && (m_remGestures.empty()) );
 	RLV_ASSERT( (m_addWearables.empty()) && (m_addAttachments.empty()) && (m_addGestures.empty()) );
 }

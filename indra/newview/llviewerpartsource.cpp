@@ -75,7 +75,7 @@ void LLViewerPartSource::updatePart(LLViewerPart &part, const F32 dt)
 
 void LLViewerPartSource::update(const F32 dt) 
 {
-	llerrs << "Creating default part source!" << llendl;
+	LL_ERRS() << "Creating default part source!" << LL_ENDL;
 }
 
 LLUUID LLViewerPartSource::getImageUUID() const
@@ -322,7 +322,7 @@ void LLViewerPartSourceScript::update(const F32 dt)
 
 			part->mStartGlow = mPartSysData.mPartData.mStartGlow;
 			part->mEndGlow = mPartSysData.mPartData.mEndGlow;
-			part->mGlow = LLColor4U(0, 0, 0, (U8) llmath::llround(part->mStartGlow*255.f));
+			part->mGlow = LLColor4U(0, 0, 0, (U8) ll_round(part->mStartGlow*255.f));
 			
 			if (mPartSysData.mPattern & LLPartSysData::LL_PART_SRC_PATTERN_DROP)
 			{
@@ -405,7 +405,7 @@ void LLViewerPartSourceScript::update(const F32 dt)
 			{
 				part->mPosAgent = mPosAgent;
 				part->mVelocity.setVec(0.f, 0.f, 0.f);
-				//llwarns << "Unknown source pattern " << (S32)mPartSysData.mPattern << llendl;
+				//LL_WARNS() << "Unknown source pattern " << (S32)mPartSysData.mPattern << LL_ENDL;
 			}
 
 			if (part->mFlags & LLPartData::LL_PART_FOLLOW_SRC_MASK ||	// SVC-193, VWR-717

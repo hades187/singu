@@ -39,6 +39,8 @@
 #include "lluictrlfactory.h"
 #include "llviewerobjectlist.h"
 #include "llvoavatar.h"
+#include "llpreviewtexture.h"
+#include "llviewercontrol.h"
 
 using namespace LLAvatarAppearanceDefines;
 
@@ -77,7 +79,8 @@ BOOL LLFloaterAvatarTextures::postBuild()
 	}
 	mTitle = getTitle();
 
-	childSetAction("Dump", onClickDump, this);
+//	childSetAction("Dump", onClickDump, this);
+    childSetAction("Open", onClickOpen, &mID);
 
 	refresh();
 	return TRUE;
@@ -162,20 +165,38 @@ void LLFloaterAvatarTextures::refresh()
 */
 // </edit>
 
-// static
-void LLFloaterAvatarTextures::onClickDump(void* data)
+void LLFloaterAvatarTextures::onClickOpen(void* userdata)
 {
-#if !LL_RELEASE_FOR_DOWNLOAD
-	LLFloaterAvatarTextures* self = (LLFloaterAvatarTextures*)data;
-	LLVOAvatar* avatarp = find_avatar(self->mID);
-	if (!avatarp) return;
+    LLUUID* avID = (LLUUID*)userdata;
 
-	for (S32 i = 0; i < avatarp->getNumTEs(); i++)
+	LLVOAvatar *avatarp = find_avatar(*avID);
+
+	for (U32 i=0; i < TEX_NUM_INDICES; i++)
 	{
-		const LLTextureEntry* te = avatarp->getTE(i);
-		if (!te) continue;
+    	LLUUID image_id = avatarp->getTE(ETextureIndex(i))->getID();
 
-		llinfos << "Avatar TE " << i << " id " << te->getID() << llendl;
-	}
-#endif
+        if (image_id != IMG_DEFAULT_AVATAR)
+        {
+            // See if we can bring an existing preview to the front
+            if (!LLPreview::show(image_id))
+	        {
+		        // There isn't one, so make a new preview
+		        S32 left, top;
+		        gFloaterView->getNewFloaterPosition(&left, &top);
+		        LLRect rect = gSavedSettings.getRect("PreviewTextureRect");
+		        rect.translate( left - rect.mLeft, top - rect.mTop );
+
+		        LLPreviewTexture* preview;
+		        preview = new LLPreviewTexture(image_id.asString(),
+                                               rect,
+                                               image_id.asString(),
+                                               image_id,
+                                               FALSE);
+		        preview->setSourceID(LLUUID::null);
+		        preview->setFocus(TRUE);
+
+		        gFloaterView->adjustToFitScreen(preview, FALSE);
+	        }
+        }
+    }
 }

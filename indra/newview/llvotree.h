@@ -34,7 +34,6 @@
 #define LL_LLVOTREE_H
 
 #include "llviewerobject.h"
-#include "lldarray.h"
 #include "xform.h"
 
 class LLFace;
@@ -77,6 +76,7 @@ public:
 	/*virtual*/ BOOL		updateGeometry(LLDrawable *drawable);
 	/*virtual*/ void		updateSpatialExtents(LLVector4a &min, LLVector4a &max);
 
+	void resetVertexBuffers();
 	virtual U32 getPartitionType() const;
 
 	void updateRadius();

@@ -49,7 +49,6 @@
 #include "pipeline.h"
 #include "llviewerregion.h"
 #include "llvlcomposition.h"
-#include "noise.h"
 #include "llviewercamera.h"
 #include "llglheaders.h"
 #include "lldrawpoolterrain.h"
@@ -126,7 +125,7 @@ LLSurface::~LLSurface()
 	LLDrawPoolTerrain *poolp = (LLDrawPoolTerrain*) gPipeline.findPool(LLDrawPool::POOL_TERRAIN, mSTexturep);
 	if (!poolp)
 	{
-		llwarns << "No pool for terrain on destruction!" << llendl;
+		LL_WARNS() << "No pool for terrain on destruction!" << LL_ENDL;
 	}
 	else if (poolp->mReferences.empty())
 	{
@@ -143,7 +142,7 @@ LLSurface::~LLSurface()
 	}
 	else
 	{
-		llerrs << "Terrain pool not empty!" << llendl;
+		LL_ERRS() << "Terrain pool not empty!" << LL_ENDL;
 	}
 }
 
@@ -899,7 +898,7 @@ void LLSurface::decompressDCTPatch(LLBitPack &bitpack, LLGroupHeader *gopp, BOOL
 
 		if ((i >= mPatchesPerEdge) || (j >= mPatchesPerEdge))
 		{
-			llwarns << "Received invalid terrain packet - patch header patch ID incorrect!" 
+			LL_WARNS() << "Received invalid terrain packet - patch header patch ID incorrect!" 
 				<< " patches per edge " << mPatchesPerEdge
 				<< " i " << i
 				<< " j " << j
@@ -907,7 +906,7 @@ void LLSurface::decompressDCTPatch(LLBitPack &bitpack, LLGroupHeader *gopp, BOOL
 				<< " range " << (S32)ph.range
 				<< " quant_wbits " << (S32)ph.quant_wbits
 				<< " patchids " << (S32)ph.patchids
-				<< llendl;
+				<< LL_ENDL;
             LLAppViewer::instance()->badNetworkHandler();
 			return;
 		}
@@ -1145,13 +1144,13 @@ LLSurfacePatch *LLSurface::resolvePatchRegion(const F32 x, const F32 y) const
 	{
 		if(0 == mNumberOfPatches)
 		{
-			llwarns << "No patches for current region!" << llendl;
+			LL_WARNS() << "No patches for current region!" << LL_ENDL;
 			return NULL;
 		}
 		S32 old_index = index;
 		index = llclamp(old_index, 0, (mNumberOfPatches - 1));
-		llwarns << "Clamping out of range patch index " << old_index
-				<< " to " << index << llendl;
+		LL_WARNS() << "Clamping out of range patch index " << old_index
+				<< " to " << index << LL_ENDL;
 	}
 	return &(mPatchList[index]);
 }
@@ -1340,12 +1339,12 @@ LLSurfacePatch *LLSurface::getPatch(const S32 x, const S32 y) const
 {
 	if ((x < 0) || (x >= mPatchesPerEdge))
 	{
-		llwarns << "Asking for patch out of bounds" << llendl;
+		LL_WARNS() << "Asking for patch out of bounds" << LL_ENDL;
 		return NULL;
 	}
 	if ((y < 0) || (y >= mPatchesPerEdge))
 	{
-		llwarns << "Asking for patch out of bounds" << llendl;
+		LL_WARNS() << "Asking for patch out of bounds" << LL_ENDL;
 		return NULL;
 	}
 
@@ -1384,7 +1383,7 @@ void LLSurface::setWaterHeight(F32 height)
 	}
 	else
 	{
-		llwarns << "LLSurface::setWaterHeight with no water object!" << llendl;
+		LL_WARNS() << "LLSurface::setWaterHeight with no water object!" << LL_ENDL;
 	}
 }
 
@@ -1425,10 +1424,10 @@ BOOL LLSurface::generateWaterTexture(const F32 x, const F32 y,
 
 	S32 x_begin, y_begin, x_end, y_end;
 
-	x_begin = llmath::llround(x * scale_inv);
-	y_begin = llmath::llround(y * scale_inv);
-	x_end = llmath::llround((x + width) * scale_inv);
-	y_end = llmath::llround((y + width) * scale_inv);
+	x_begin = ll_round(x * scale_inv);
+	y_begin = ll_round(y * scale_inv);
+	x_end = ll_round((x + width) * scale_inv);
+	y_end = ll_round((y + width) * scale_inv);
 
 	if (x_end > tex_width)
 	{
@@ -1476,9 +1475,9 @@ BOOL LLSurface::generateWaterTexture(const F32 x, const F32 y,
 				// Want non-linear curve for transparency gradient
 				coloru = MAX_WATER_COLOR;
 				const F32 frac = 1.f - 2.f/(2.f - (height - WATER_HEIGHT));
-				S32 alpha = 64 + llmath::llround((255-64)*frac);
+				S32 alpha = 64 + ll_round((255-64)*frac);
 
-				alpha = llmin(llmath::llround((F32)MAX_WATER_COLOR.mV[3]), alpha);
+				alpha = llmin(ll_round((F32)MAX_WATER_COLOR.mV[3]), alpha);
 				alpha = llmax(64, alpha);
 
 				coloru.mV[3] = alpha;

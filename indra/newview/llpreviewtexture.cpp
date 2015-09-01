@@ -218,8 +218,10 @@ void LLPreviewTexture::init()
 	}
 
 
-	if (!mCopyToInv) 
+//	if (!mCopyToInv) 
 	{
+		childSetText("uuid", mImageID.asString());
+
 		const LLInventoryItem* item = getItem();
 		
 		if (item)
@@ -228,7 +230,6 @@ void LLPreviewTexture::init()
 			childSetCommitCallback("desc", LLPreview::onText, this);
 			childSetText("desc", item->getDescription());
 			getChild<LLLineEditor>("desc")->setPrevalidate(&LLLineEditor::prevalidatePrintableNotPipe);
-			childSetText("uuid", getItemID().asString());
 			childSetText("uploader", getItemCreatorName());
 			childSetText("uploadtime", getItemCreationDate());
 			childSetText("alphanote", LLTrans::getString("LoadingData"));
@@ -373,7 +374,7 @@ void LLPreviewTexture::draw()
 // virtual
 BOOL LLPreviewTexture::canSaveAs() const
 {
-	return mIsCopyable && !mLoadingFullImage && mImage.notNull() && !mImage->isMissingAsset();
+	return /*mIsCopyable && */!mLoadingFullImage && mImage.notNull() && !mImage->isMissingAsset();
 }
 
 // virtual
@@ -466,9 +467,9 @@ LLUUID LLPreviewTexture::getItemID()
 	const LLViewerInventoryItem* item = getItem();
 	if(item)
 	{
-		U32 perms = item->getPermissions().getMaskOwner();
-		if ((perms & PERM_TRANSFER) &&
-			(perms & PERM_COPY))
+//		U32 perms = item->getPermissions().getMaskOwner();
+//		if ((perms & PERM_TRANSFER) &&
+//			(perms & PERM_COPY))
 		{
 			return item->getAssetUUID();
 		}
@@ -590,7 +591,7 @@ void LLPreviewTexture::updateDimensions()
 		client_width = getRect().getWidth() - horiz_pad;
 		if (mAspectRatio > 0.f)
 		{
-			client_height = llmath::llround(client_width / mAspectRatio);
+			client_height = ll_round(client_width / mAspectRatio);
 		}
 		else
 		{
@@ -608,7 +609,7 @@ void LLPreviewTexture::updateDimensions()
 		if (client_height > max_height)
 		{
 			client_height = max_height;
-			client_width = llmath::llround(client_height * mAspectRatio);
+			client_width = ll_round(client_height * mAspectRatio);
 		}
 	}
 	else

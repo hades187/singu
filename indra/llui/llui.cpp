@@ -79,7 +79,7 @@ void make_ui_sound(const char* namep)
 	std::string name = ll_safe_string(namep);
 	if (!LLUI::sConfigGroup->controlExists(name))
 	{
-		llwarns << "tried to make ui sound for unknown sound name: " << name << llendl;	
+		LL_WARNS() << "tried to make ui sound for unknown sound name: " << name << LL_ENDL;	
 	}
 	else
 	{
@@ -90,12 +90,12 @@ void make_ui_sound(const char* namep)
 			{
 				if (LLUI::sConfigGroup->getBOOL("UISndDebugSpamToggle"))
 				{
-					llinfos << "ui sound name: " << name << " triggered but silent (null uuid)" << llendl;	
+					LL_INFOS() << "ui sound name: " << name << " triggered but silent (null uuid)" << LL_ENDL;	
 				}				
 			}
 			else
 			{
-				llwarns << "ui sound named: " << name << " does not translate to a valid uuid" << llendl;	
+				LL_WARNS() << "ui sound named: " << name << " does not translate to a valid uuid" << LL_ENDL;	
 			}
 
 		}
@@ -103,7 +103,7 @@ void make_ui_sound(const char* namep)
 		{
 			if (LLUI::sConfigGroup->getBOOL("UISndDebugSpamToggle"))
 			{
-				llinfos << "ui sound name: " << name << llendl;	
+				LL_INFOS() << "ui sound name: " << name << LL_ENDL;	
 			}
 			LLUI::sAudioCallback(uuid);
 		}
@@ -137,7 +137,7 @@ void LLUI::initClass(LLControlGroup* config,
 		|| sIgnoresGroup == NULL
 		|| sColorsGroup == NULL)
 	{
-		llerrs << "Failure to initialize configuration groups" << llendl;
+		LL_ERRS() << "Failure to initialize configuration groups" << LL_ENDL;
 	}
 
 	sAudioCallback = audio_callback;
@@ -158,8 +158,8 @@ void LLUI::cleanupClass()
 void LLUI::setMousePositionScreen(S32 x, S32 y)
 {
 	S32 screen_x, screen_y;
-	screen_x = llmath::llround((F32)x * getScaleFactor().mV[VX]);
-	screen_y = llmath::llround((F32)y * getScaleFactor().mV[VY]);
+	screen_x = ll_round((F32)x * getScaleFactor().mV[VX]);
+	screen_y = ll_round((F32)y * getScaleFactor().mV[VY]);
 	
 	LLView::getWindow()->setCursorPosition(LLCoordGL(screen_x, screen_y).convert());
 }
@@ -170,8 +170,8 @@ void LLUI::getMousePositionScreen(S32 *x, S32 *y)
 	LLCoordWindow cursor_pos_window;
 	getWindow()->getCursorPosition(&cursor_pos_window);
 	LLCoordGL cursor_pos_gl(cursor_pos_window.convert());
-	*x = llmath::llround((F32)cursor_pos_gl.mX / getScaleFactor().mV[VX]);
-	*y = llmath::llround((F32)cursor_pos_gl.mY / getScaleFactor().mV[VX]);
+	*x = ll_round((F32)cursor_pos_gl.mX / getScaleFactor().mV[VX]);
+	*y = ll_round((F32)cursor_pos_gl.mY / getScaleFactor().mV[VX]);
 }
 
 //static 
@@ -262,15 +262,15 @@ LLVector2 LLUI::getWindowSize()
 //static
 void LLUI::screenPointToGL(S32 screen_x, S32 screen_y, S32 *gl_x, S32 *gl_y)
 {
-	*gl_x = llmath::llround((F32)screen_x * getScaleFactor().mV[VX]);
-	*gl_y = llmath::llround((F32)screen_y * getScaleFactor().mV[VY]);
+	*gl_x = ll_round((F32)screen_x * getScaleFactor().mV[VX]);
+	*gl_y = ll_round((F32)screen_y * getScaleFactor().mV[VY]);
 }
 
 //static
 void LLUI::glPointToScreen(S32 gl_x, S32 gl_y, S32 *screen_x, S32 *screen_y)
 {
-	*screen_x = llmath::llround((F32)gl_x / getScaleFactor().mV[VX]);
-	*screen_y = llmath::llround((F32)gl_y / getScaleFactor().mV[VY]);
+	*screen_x = ll_round((F32)gl_x / getScaleFactor().mV[VX]);
+	*screen_y = ll_round((F32)gl_y / getScaleFactor().mV[VY]);
 }
 
 //static

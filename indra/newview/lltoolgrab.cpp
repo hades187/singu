@@ -122,7 +122,7 @@ BOOL LLToolGrab::handleDoubleClick(S32 x, S32 y, MASK mask)
 {
 	if (gDebugClicks)
 	{
-		llinfos << "LLToolGrab handleDoubleClick (becoming mouseDown)" << llendl;
+		LL_INFOS() << "LLToolGrab handleDoubleClick (becoming mouseDown)" << LL_ENDL;
 	}
 
 	return FALSE;
@@ -132,7 +132,7 @@ BOOL LLToolGrab::handleMouseDown(S32 x, S32 y, MASK mask)
 {
 	if (gDebugClicks)
 	{
-		llinfos << "LLToolGrab handleMouseDown" << llendl;
+		LL_INFOS() << "LLToolGrab handleMouseDown" << LL_ENDL;
 	}
 
 	// call the base class to propogate info to sim
@@ -187,12 +187,12 @@ BOOL LLToolGrab::handleObjectHit(const LLPickInfo& info)
 
 	if (gDebugClicks)
 	{
-		llinfos << "LLToolGrab handleObjectHit " << info.mMousePt.mX << "," << info.mMousePt.mY << llendl;
+		LL_INFOS() << "LLToolGrab handleObjectHit " << info.mMousePt.mX << "," << info.mMousePt.mY << LL_ENDL;
 	}
 
 	if (NULL == objectp) // unexpected
 	{
-		llwarns << "objectp was NULL; returning FALSE" << llendl;
+		LL_WARNS() << "objectp was NULL; returning FALSE" << LL_ENDL;
 		return FALSE;
 	}
 
@@ -735,7 +735,7 @@ void LLToolGrab::handleHoverActive(S32 x, S32 y, MASK mask)
 	gViewerWindow->hideCursor();
 	gViewerWindow->setCursor(UI_CURSOR_ARROW);  
 
-	lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (active) [cursor hidden]" << llendl;		
+	LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (active) [cursor hidden]" << LL_ENDL;
 }
  
 
@@ -921,7 +921,7 @@ void LLToolGrab::handleHoverInactive(S32 x, S32 y, MASK mask)
 	}
 
 	// JC - TODO - change cursor based on gGrabBtnVertical, gGrabBtnSpin
-	lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (inactive-not over editable object)" << llendl;		
+	LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (inactive-not over editable object)" << LL_ENDL;
 	gViewerWindow->setCursor(UI_CURSOR_TOOLGRAB);
 }
 
@@ -931,7 +931,7 @@ void LLToolGrab::handleHoverFailed(S32 x, S32 y, MASK mask)
 	if( GRAB_NOOBJECT == mMode )
 	{
 		gViewerWindow->setCursor(UI_CURSOR_NO);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (not on object)" << llendl;		
+		LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (not on object)" << LL_ENDL;
 	}
 	else
 	{
@@ -944,13 +944,13 @@ void LLToolGrab::handleHoverFailed(S32 x, S32 y, MASK mask)
 			{
 			case GRAB_LOCKED:
 				gViewerWindow->setCursor(UI_CURSOR_GRABLOCKED);
-				lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (grab failed, no move permission)" << llendl;		
+				LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (grab failed, no move permission)" << LL_ENDL;
 				break;
 
 //  Non physical now handled by handleHoverActive - CRO				
 //			case GRAB_NONPHYSICAL:
 //				gViewerWindow->setCursor(UI_CURSOR_ARROW);
-//				lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (grab failed, nonphysical)" << llendl;		
+//				LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (grab failed, nonphysical)" << LL_ENDL;		
 //				break;
 			default:
 				llassert(0);
@@ -959,7 +959,7 @@ void LLToolGrab::handleHoverFailed(S32 x, S32 y, MASK mask)
 		else
 		{
 			gViewerWindow->setCursor(UI_CURSOR_ARROW);
-			lldebugst(LLERR_USER_INPUT) << "hover handled by LLToolGrab (grab failed but within slop)" << llendl;		
+			LL_DEBUGS("UserInput") << "hover handled by LLToolGrab (grab failed but within slop)" << LL_ENDL;
 		}
 	}
 }
@@ -1156,16 +1156,16 @@ void send_ObjectGrab_message(LLViewerObject* object, const LLPickInfo & pick, co
 	msg->sendMessage( object->getRegion()->getHost());
 
 	/*  Diagnostic code
-	llinfos << "mUVCoords: " << pick.mUVCoords
+	LL_INFOS() << "mUVCoords: " << pick.mUVCoords
 			<< ", mSTCoords: " << pick.mSTCoords
 			<< ", mObjectFace: " << pick.mObjectFace
 			<< ", mIntersection: " << pick.mIntersection
 			<< ", mNormal: " << pick.mNormal
 			<< ", mBinormal: " << pick.mBinormal
-			<< llendl;
+			<< LL_ENDL;
 
-	llinfos << "Avatar pos: " << gAgent.getPositionAgent() << llendl;
-	llinfos << "Object pos: " << object->getPosition() << llendl;
+	LL_INFOS() << "Avatar pos: " << gAgent.getPositionAgent() << LL_ENDL;
+	LL_INFOS() << "Object pos: " << object->getPosition() << LL_ENDL;
 	*/
 }
 

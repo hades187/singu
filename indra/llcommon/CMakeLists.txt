@@ -24,7 +24,6 @@ set(llcommon_SOURCE_FILES
     aithreadid.cpp
     imageids.cpp
     indra_constants.cpp
-    ll_template_cast.h
     llallocator.cpp
     llallocator_heap_profile.cpp
     llapp.cpp
@@ -69,6 +68,7 @@ set(llcommon_SOURCE_FILES
     llmetrics.cpp
     llmortician.cpp
     lloptioninterface.cpp
+    llpredicate.cpp
     llprocesslauncher.cpp
     llprocessor.cpp
     llptrto.cpp 
@@ -115,12 +115,10 @@ set(llcommon_HEADER_FILES
     aithreadsafe.h
     bitpack.h
     ctype_workaround.h
-    doublelinkedlist.h
     fix_macros.h
     imageids.h
     indra_constants.h
     linden_common.h
-    linked_lists.h
     llaccountingcost.h
     llalignedarray.h
     llagentconstants.h
@@ -144,21 +142,14 @@ set(llcommon_HEADER_FILES
     llcrc.h
     llcriticaldamp.h
     llcursortypes.h
-    lldarray.h
-    lldarrayptr.h
     lldate.h
     lldefs.h
-    lldeleteutils.h
     lldependencies.h
     lldepthstack.h
     lldictionary.h
-    lldlinked.h
-    lldqueueptr.h
     llendianswizzle.h
-    llenum.h
     llerror.h
     llerrorcontrol.h
-    llerrorlegacy.h
     llerrorthread.h
     llevent.h
     lleventapi.h
@@ -177,10 +168,9 @@ set(llcommon_HEADER_FILES
     llformat.h
     llframetimer.h
     llhandle.h
-    llhash.h
     llheartbeat.h
     llhttpstatuscodes.h
-    llindexedqueue.h
+    llindexedvector.h
     llinitparam.h
     llinstancetracker.h
     llkeythrottle.h
@@ -199,12 +189,11 @@ set(llcommon_HEADER_FILES
     llnametable.h
     lloptioninterface.h
     llpointer.h
+    llpredicate.h
     llpreprocessor.h
     llpriqueuemap.h
     llprocesslauncher.h
     llprocessor.h
-    llptrskiplist.h
-    llptrskipmap.h
     llptrto.h
     llqueuedthread.h
     llrand.h
@@ -223,7 +212,6 @@ set(llcommon_HEADER_FILES
     llskiplist.h
     llskipmap.h
     llsortedvector.h
-    llstack.h
     llstacktrace.h
     llstat.h
     llstatenums.h
@@ -241,7 +229,6 @@ set(llcommon_HEADER_FILES
     lltypeinfolookup.h
     lluri.h
     lluuid.h
-    sguuidhash.h
     llversionviewer.h.in
     llworkerthread.h
     metaclass.h
@@ -252,7 +239,6 @@ set(llcommon_HEADER_FILES
     reflectivet.h
     stdenums.h
     stdtypes.h
-    string_table.h
     stringize.h
     timer.h
     timing.h

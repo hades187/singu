@@ -97,7 +97,7 @@ void LLURLRequest::initialize_impl(void)
 		useProxy(false);
 	}
 
-	if (mAction == LLHTTPClient::HTTP_PUT || mAction == LLHTTPClient::HTTP_POST)
+	if (mAction == LLHTTPClient::HTTP_PUT || mAction == LLHTTPClient::HTTP_POST || mAction == LLHTTPClient::HTTP_PATCH)
 	{
 		// If the Content-Type header was passed in we defer to the caller's wisdom,
 		// but if they did not specify a Content-Type, then ask the injector.
@@ -132,7 +132,7 @@ void LLURLRequest::initialize_impl(void)
 	}
 	catch (AICurlNoBody const& error)
 	{
-		llwarns << "Injector::get_body() failed: " << error.what() << llendl; 
+		LL_WARNS() << "Injector::get_body() failed: " << error.what() << LL_ENDL; 
 	}
 
 	if (success)
@@ -237,7 +237,16 @@ bool LLURLRequest::configure(AICurlEasyRequest_wat const& curlEasyRequest_w)
 			curlEasyRequest_w->setoptString(CURLOPT_ENCODING, mNoCompression ? "identity" : "");
 			rv = true;
 			break;
+			
+		
+		case LLHTTPClient::HTTP_PATCH:
 
+			curlEasyRequest_w->setPatch(mBodySize, mKeepAlive);
+			
+			curlEasyRequest_w->setoptString(CURLOPT_ENCODING, mNoCompression ? "identity" : "");
+			rv = true;
+			break;
+			
 		case LLHTTPClient::HTTP_POST:
 
 			// Set the handle for an http post
@@ -254,6 +263,12 @@ bool LLURLRequest::configure(AICurlEasyRequest_wat const& curlEasyRequest_w)
 			rv = true;
 			break;
 
+		case LLHTTPClient::HTTP_COPY:
+			// Set the handle for an http copy
+			curlEasyRequest_w->setoptString(CURLOPT_CUSTOMREQUEST, "COPY");
+			rv = true;
+			break;
+
 		case LLHTTPClient::HTTP_MOVE:
 			// Set the handle for an http post
 			curlEasyRequest_w->setoptString(CURLOPT_CUSTOMREQUEST, "MOVE");
@@ -261,7 +276,7 @@ bool LLURLRequest::configure(AICurlEasyRequest_wat const& curlEasyRequest_w)
 			break;
 
 		default:
-			llwarns << "Unhandled URLRequest action: " << mAction << llendl;
+			LL_WARNS() << "Unhandled URLRequest action: " << mAction << LL_ENDL;
 			break;
 		}
 		if(rv)

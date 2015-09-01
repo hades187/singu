@@ -789,7 +789,7 @@ std::string LLUrlEntryParcel::getLabel(const std::string &url, const LLUrlLabelC
 
 	if (path_parts < 3) // no parcel id
 	{
-		llwarns << "Failed to parse url [" << url << "]" << llendl;
+		LL_WARNS() << "Failed to parse url [" << url << "]" << LL_ENDL;
 		return url;
 	}
 
@@ -835,9 +835,9 @@ void LLUrlEntryParcel::processParcelInfo(const LLParcelData& parcel_data)
 	// If parcel name is empty use Sim_name (x, y, z) for parcel label.
 	else if (!parcel_data.sim_name.empty())
 	{
-		S32 region_x = llmath::llround(parcel_data.global_x) % REGION_WIDTH_UNITS;
-		S32 region_y = llmath::llround(parcel_data.global_y) % REGION_WIDTH_UNITS;
-		S32 region_z = llmath::llround(parcel_data.global_z);
+		S32 region_x = ll_round(parcel_data.global_x) % REGION_WIDTH_UNITS;
+		S32 region_y = ll_round(parcel_data.global_y) % REGION_WIDTH_UNITS;
+		S32 region_z = ll_round(parcel_data.global_z);
 
 		label = llformat("%s (%d, %d, %d)",
 				parcel_data.sim_name.c_str(), region_x, region_y, region_z);
@@ -929,7 +929,7 @@ std::string LLUrlEntryRegion::getLabel(const std::string &url, const LLUrlLabelC
 
 	if (path_parts < 3) // no region name
 	{
-		llwarns << "Failed to parse url [" << url << "]" << llendl;
+		LL_WARNS() << "Failed to parse url [" << url << "]" << LL_ENDL;
 		return url;
 	}
 

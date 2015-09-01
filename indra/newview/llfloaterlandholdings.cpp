@@ -215,7 +215,7 @@ void LLFloaterLandHoldings::processPlacesReply(LLMessageSystem* msg, void**)
 		if ( msg->getSizeFast(_PREHASH_QueryData, i, _PREHASH_ProductSKU) > 0 )
 		{
 			msg->getStringFast(	_PREHASH_QueryData, _PREHASH_ProductSKU, land_sku, i);
-			llinfos << "Land sku: " << land_sku << llendl;
+			LL_INFOS() << "Land sku: " << land_sku << LL_ENDL;
 			land_type = LLProductInfoRequestManager::instance().getDescriptionForSku(land_sku);
 		}
 		else
@@ -227,8 +227,8 @@ void LLFloaterLandHoldings::processPlacesReply(LLMessageSystem* msg, void**)
 		self->mActualArea += actual_area;
 		self->mBillableArea += billable_area;
 
-		S32 region_x = llmath::llround(global_x) % REGION_WIDTH_UNITS;
-		S32 region_y = llmath::llround(global_y) % REGION_WIDTH_UNITS;
+		S32 region_x = ll_round(global_x) % REGION_WIDTH_UNITS;
+		S32 region_y = ll_round(global_y) % REGION_WIDTH_UNITS;
 
 		std::string location;
 		location = llformat("%s (%d, %d)", sim_name.c_str(), region_x, region_y);

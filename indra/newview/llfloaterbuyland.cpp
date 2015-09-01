@@ -386,9 +386,9 @@ void LLFloaterBuyLandUI::updateParcelInfo()
 	}
 
 	mParcelBillableArea =
-		llmath::llround(mRegion->getBillableFactor() * mParcelActualArea);
+		ll_round(mRegion->getBillableFactor() * mParcelActualArea);
 
- 	mParcelSupportedObjects = llmath::llround(
+ 	mParcelSupportedObjects = ll_round(
 		parcel->getMaxPrimCapacity() * parcel->getParcelPrimBonus()); 
  	// Can't have more than region max tasks, regardless of parcel 
  	// object bonus factor. 
@@ -843,7 +843,7 @@ void LLFloaterBuyLandUI::startTransaction(TransactionType type, const LLXMLRPCVa
 			method = "buyLandPrep";
 			break;
 		default:
-			llwarns << "LLFloaterBuyLandUI: Unknown transaction type!" << llendl;
+			LL_WARNS() << "LLFloaterBuyLandUI: Unknown transaction type!" << LL_ENDL;
 			return;
 	}
 

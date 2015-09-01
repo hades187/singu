@@ -47,7 +47,7 @@ public:
 	LLAssetUploadChainResponder(const LLSD& post_data,
 								const std::string& file_name,
 								const LLUUID& queue_id,
-								char* data, 
+								U8* data, 
 								U32 data_size,
 								std::string script_name,
 								LLAssetUploadQueueSupplier *supplier) :
@@ -77,7 +77,7 @@ public:
 	
 	/*virtual*/ void httpFailure(void)
    	{
-		llwarns << "Error: " << mReason << llendl;
+		LL_WARNS() << "Error: " << mReason << LL_ENDL;
 		LLUpdateTaskInventoryResponder::httpFailure();
    		LLAssetUploadQueue *queue = mSupplier->get();
    		if (queue)
@@ -107,7 +107,7 @@ public:
 		std::string uploader = content["uploader"];
 
 		mSupplier->log(std::string("Compiling " + mScriptName).c_str());
-		llinfos << "Compiling " << llendl;
+		LL_INFOS() << "Compiling " << LL_ENDL;
 
 		// postRaw takes ownership of mData and will delete it.
 		LLHTTPClient::postRaw(uploader, mData, mDataSize, this);
@@ -121,7 +121,7 @@ public:
 		if (content["compiled"])
 		{
 			mSupplier->log("Compilation succeeded");
-			llinfos << "Compiled!" << llendl;
+			LL_INFOS() << "Compiled!" << LL_ENDL;
 		}
 		else
 		{
@@ -129,8 +129,10 @@ public:
 			for(LLSD::array_const_iterator line	= compile_errors.beginArray();
 				line < compile_errors.endArray(); line++)
 			{
-				mSupplier->log(line->asString());
-				llinfos << content["errors"] << llendl;
+				std::string str = line->asString();
+				str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+				mSupplier->log(str);
+				LL_INFOS() << content["errors"] << LL_ENDL;
 			}
 		}
 		LLUpdateTaskInventoryResponder::uploadComplete(content);
@@ -139,7 +141,7 @@ public:
 	/*virtual*/ char const* getName(void) const { return "LLAssetUploadChainResponder"; }
 
 	LLAssetUploadQueueSupplier *mSupplier;
-	char* mData;
+	U8* mData;
 	U32 mDataSize;
 	std::string mScriptName;
 };
@@ -190,7 +192,7 @@ void LLAssetUploadQueue::queue(const std::string& filename,
 							   BOOL is_running, 
 							   BOOL is_target_mono, 
 							   const LLUUID& queue_id,
-							   char* script_data,
+							   U8* script_data,
 							   U32 data_size,
 							   std::string script_name)
 {

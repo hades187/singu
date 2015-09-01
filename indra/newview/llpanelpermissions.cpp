@@ -92,7 +92,7 @@ bool is_asset_exportable(const LLUUID& asset_id)
 	LLAssetIDMatches asset_id_matches(asset_id);
 	gInventory.collectDescendentsIf(LLUUID::null, cats, items, true, asset_id_matches, false);
 
-	for (int i = 0; i < items.count(); ++i)
+	for (U32 i = 0; i < items.size(); ++i)
 	{
 		if (perms_allow_export(items[i]->getPermissions())) return true;
 	}
@@ -202,14 +202,18 @@ void LLPanelPermissions::disableAll()
 	getChildView("button set group")->setEnabled(FALSE);
 	getChildView("button open group")->setEnabled(FALSE);
 
-	getChild<LLUICtrl>("Object Name")->setValue(LLStringUtil::null);
-	getChildView("Object Name")->setEnabled(FALSE);
+	LLLineEditor* ed = getChild<LLLineEditor>("Object Name");
+	ed->setValue(LLStringUtil::null);
+	ed->setEnabled(FALSE);
+	ed->setLabel(LLStringUtil::null);
 	getChildView("Name:")->setEnabled(FALSE);
 	//getChild<LLUICtrl>("Group Name")->setValue(LLStringUtil::null);
 	//getChildView("Group Name")->setEnabled(FALSE);
 	getChildView("Description:")->setEnabled(FALSE);
-	getChild<LLUICtrl>("Object Description")->setValue(LLStringUtil::null);
-	getChildView("Object Description")->setEnabled(FALSE);
+	ed = getChild<LLLineEditor>("Object Description");
+	ed->setEnabled(FALSE);
+	ed->setValue(LLStringUtil::null);
+	ed->setLabel(LLStringUtil::null);
 
 	getChildView("Permissions:")->setEnabled(FALSE);
 		
@@ -403,7 +407,7 @@ void LLPanelPermissions::refresh()
 	std::string owner_name;
 	const BOOL owners_identical = LLSelectMgr::getInstance()->selectGetOwner(mOwnerID, owner_name);
 
-//	llinfos << "owners_identical " << (owners_identical ? "TRUE": "FALSE") << llendl;
+//	LL_INFOS() << "owners_identical " << (owners_identical ? "TRUE": "FALSE") << LL_ENDL;
 	std::string last_owner_name;
 	LLSelectMgr::getInstance()->selectGetLastOwner(mLastOwnerID, last_owner_name);
 
@@ -442,19 +446,36 @@ void LLPanelPermissions::refresh()
 		if ( (creators_identical) && (mCreatorID != gAgent.getID()) && ((mCreatorID == mOwnerID) || (RlvUtil::isNearbyAgent(mCreatorID))) )
 		{
 			creator_name = RlvStrings::getAnonym(creator_name);
-			fRlvEnableOwner = false;
+			fRlvEnableCreator = false;
 		}
 
 		// Only anonymize the owner name if all of the selection is owned by the same avie and isn't group owned
 		if ( (owners_identical) && (!LLSelectMgr::getInstance()->selectIsGroupOwned()) && (mOwnerID != gAgent.getID()) )
 		{
 			owner_name = RlvStrings::getAnonym(owner_name);
-			fRlvEnableCreator = false;
+			fRlvEnableOwner = false;
 		}
 
 		if (RlvUtil::isNearbyAgent(mLastOwnerID))
 		{
+			last_owner_name = RlvStrings::getAnonym(last_owner_name);
+			fRlvEnableLastOwner = false;
+		}
+	}
+	else if ((objectp->isAttachment() || objectp->isAvatar()) && gRlvHandler.hasBehaviour(RLV_BHVR_SHOWNAMETAGS) && mOwnerID != gAgentID)
+	{
+		owner_name = RlvStrings::getAnonym(owner_name);
+		fRlvEnableOwner = false;
+
+		if (mOwnerID == mCreatorID)
+		{
 			creator_name = RlvStrings::getAnonym(creator_name);
+			fRlvEnableCreator = false;
+		}
+
+		if (mOwnerID == mLastOwnerID)
+		{
+			last_owner_name = RlvStrings::getAnonym(last_owner_name);
 			fRlvEnableLastOwner = false;
 		}
 	}
@@ -510,7 +531,7 @@ void LLPanelPermissions::refresh()
 	{
 		if(keyboard_focus_view != LineEditorObjectName)
 		{
-			getChild<LLUICtrl>("Object Name")->setValue(nodep->mName);
+			LineEditorObjectName->setValue(nodep->mName);
 		}
 
 		if(LineEditorObjectDesc)
@@ -523,25 +544,26 @@ void LLPanelPermissions::refresh()
 	}
 	else
 	{
-		getChild<LLUICtrl>("Object Name")->setValue(LLStringUtil::null);
+		LineEditorObjectName->setText(LLStringUtil::null);
 		LineEditorObjectDesc->setText(LLStringUtil::null);
 	}
 
 	// figure out the contents of the name, description, & category
-	BOOL edit_name_desc = FALSE;
-	if(is_one_object && objectp->permModify() && !objectp->isPermanentEnforced())
+	// Singu Note: It was requested that the user be able to bulk change description
 	{
-		edit_name_desc = TRUE;
+		const std::string& str(object_count > 1 ? getString("multiple_objects_selected") : LLStringUtil::null);
+		LineEditorObjectName->setLabel(str);
+		LineEditorObjectDesc->setLabel(str);
 	}
-	if(edit_name_desc)
+	if (/*is_one_object &&*/ objectp->permModify() && !objectp->isPermanentEnforced())
 	{
-		getChildView("Object Name")->setEnabled(TRUE);
-		getChildView("Object Description")->setEnabled(TRUE);
+		LineEditorObjectName->setEnabled(TRUE);
+		LineEditorObjectDesc->setEnabled(TRUE);
 	}
 	else
 	{
-		getChildView("Object Name")->setEnabled(FALSE);
-		getChildView("Object Description")->setEnabled(FALSE);
+		LineEditorObjectName->setEnabled(FALSE);
+		LineEditorObjectDesc->setEnabled(FALSE);
 	}
 
 	S32 total_sale_price = 0;
@@ -1194,28 +1216,28 @@ void LLPanelPermissions::onCommitExport(const LLSD& param)
 // static
 void LLPanelPermissions::onCommitNextOwnerModify(LLUICtrl* ctrl, void* data)
 {
-	//llinfos << "LLPanelPermissions::onCommitNextOwnerModify" << llendl;
+	//LL_INFOS() << "LLPanelPermissions::onCommitNextOwnerModify" << LL_ENDL;
 	onCommitPerm(ctrl, data, PERM_NEXT_OWNER, PERM_MODIFY);
 }
 
 // static
 void LLPanelPermissions::onCommitNextOwnerCopy(LLUICtrl* ctrl, void* data)
 {
-	//llinfos << "LLPanelPermissions::onCommitNextOwnerCopy" << llendl;
+	//LL_INFOS() << "LLPanelPermissions::onCommitNextOwnerCopy" << LL_ENDL;
 	onCommitPerm(ctrl, data, PERM_NEXT_OWNER, PERM_COPY);
 }
 
 // static
 void LLPanelPermissions::onCommitNextOwnerTransfer(LLUICtrl* ctrl, void* data)
 {
-	//llinfos << "LLPanelPermissions::onCommitNextOwnerTransfer" << llendl;
+	//LL_INFOS() << "LLPanelPermissions::onCommitNextOwnerTransfer" << LL_ENDL;
 	onCommitPerm(ctrl, data, PERM_NEXT_OWNER, PERM_TRANSFER);
 }
 
 // static
 void LLPanelPermissions::onCommitName(LLUICtrl*, void* data)
 {
-	//llinfos << "LLPanelPermissions::onCommitName()" << llendl;
+	//LL_INFOS() << "LLPanelPermissions::onCommitName()" << LL_ENDL;
 	LLPanelPermissions* self = (LLPanelPermissions*)data;
 	LLLineEditor*	tb = self->getChild<LLLineEditor>("Object Name");
 	if(tb)
@@ -1229,7 +1251,7 @@ void LLPanelPermissions::onCommitName(LLUICtrl*, void* data)
 // static
 void LLPanelPermissions::onCommitDesc(LLUICtrl*, void* data)
 {
-	//llinfos << "LLPanelPermissions::onCommitDesc()" << llendl;
+	//LL_INFOS() << "LLPanelPermissions::onCommitDesc()" << LL_ENDL;
 	LLPanelPermissions* self = (LLPanelPermissions*)data;
 	LLLineEditor*	le = self->getChild<LLLineEditor>("Object Description");
 	if(le)
@@ -1254,7 +1276,7 @@ void LLPanelPermissions::onCommitSaleType(LLUICtrl*, void* data)
 
 void LLPanelPermissions::setAllSaleInfo()
 {
-	llinfos << "LLPanelPermissions::setAllSaleInfo()" << llendl;
+	LL_INFOS() << "LLPanelPermissions::setAllSaleInfo()" << LL_ENDL;
 	LLSaleInfo::EForSale sale_type = LLSaleInfo::FS_NOT;
 	
 	LLStringUtil::format_map_t argsCurrency;

@@ -42,6 +42,8 @@
 
 #include "rlvhandler.h"
 
+#include <boost/foreach.hpp>
+
 extern AIHTTPTimeoutPolicy moderationResponder_timeout;
 
 const LLColor4 INACTIVE_COLOR(0.3f, 0.3f, 0.3f, 0.5f);
@@ -289,7 +291,7 @@ public:
 
 	virtual void httpFailure(void)
 	{
-		llwarns << mStatus << ": " << mReason << llendl;
+		LL_WARNS() << mStatus << ": " << mReason << LL_ENDL;
 
 		if ( gIMMgr )
 		{
@@ -355,7 +357,7 @@ LLPointer<LLSpeaker> LLSpeakerMgr::setSpeaker(const LLUUID& id, const std::strin
 		speakerp->mStatus = status;
 		mSpeakers.insert(std::make_pair(speakerp->mID, speakerp));
 		mSpeakersSorted.push_back(speakerp);
-		LL_DEBUGS("Speakers") << "Added speaker " << id << llendl;
+		LL_DEBUGS("Speakers") << "Added speaker " << id << LL_ENDL;
 		fireEvent(new LLSpeakerListChangeEvent(this, speakerp->mID), "add");
 	}
 	else
@@ -376,7 +378,7 @@ LLPointer<LLSpeaker> LLSpeakerMgr::setSpeaker(const LLUUID& id, const std::strin
 		}
 		else
 		{
-			LL_WARNS("Speakers") << "Speaker " << id << " not found" << llendl;
+			LL_WARNS("Speakers") << "Speaker " << id << " not found" << LL_ENDL;
 		}
 	}
 
@@ -440,7 +442,7 @@ void LLSpeakerMgr::update(BOOL resort_ok)
 			if (moderator_muted_voice != speakerp->mModeratorMutedVoice)
 			{
 				speakerp->mModeratorMutedVoice = moderator_muted_voice;
-				LL_DEBUGS("Speakers") << (speakerp->mModeratorMutedVoice? "Muted" : "Umuted") << " speaker " << speaker_id<< llendl;
+				LL_DEBUGS("Speakers") << (speakerp->mModeratorMutedVoice? "Muted" : "Umuted") << " speaker " << speaker_id<< LL_ENDL;
 				speakerp->fireEvent(new LLSpeakerVoiceModerationEvent(speakerp));
 			}
 
@@ -580,7 +582,8 @@ void LLSpeakerMgr::updateSpeakerList()
 						LLGroupMemberData* member = member_it->second;
 						LLUUID id = member_it->first;
 						// Add only members who are online and not already in the list
-						if ((member->getOnlineStatus() == "Online") && (mSpeakers.find(id) == mSpeakers.end()))
+						const std::string& localized_online();
+						if ((member->getOnlineStatus() == localized_online()) && (mSpeakers.find(id) == mSpeakers.end()))
 						{
 							LLPointer<LLSpeaker> speakerp = setSpeaker(id, "", LLSpeaker::STATUS_VOICE_ACTIVE, LLSpeaker::SPEAKER_AGENT);
 							speakerp->mIsModerator = ((member->getAgentPowers() & GP_SESSION_MODERATOR) == GP_SESSION_MODERATOR);
@@ -643,7 +646,7 @@ bool LLSpeakerMgr::removeSpeaker(const LLUUID& speaker_id)
 		}
 	}
 
-	LL_DEBUGS("Speakers") << "Removed speaker " << speaker_id << llendl;
+	LL_DEBUGS("Speakers") << "Removed speaker " << speaker_id << LL_ENDL;
 	fireEvent(new LLSpeakerListChangeEvent(this, speaker_id), "remove");
 
 	update(TRUE);
@@ -761,7 +764,7 @@ void LLIMSpeakerMgr::setSpeakers(const LLSD& speakers)
 				// Fire event only if moderator changed
 				if ( is_moderator != speakerp->mIsModerator )
 				{
-					LL_DEBUGS("Speakers") << "Speaker " << agent_id << (is_moderator ? "is now" : "no longer is") << " a moderator" << llendl;
+					LL_DEBUGS("Speakers") << "Speaker " << agent_id << (is_moderator ? "is now" : "no longer is") << " a moderator" << LL_ENDL;
 					fireEvent(new LLSpeakerUpdateModeratorEvent(speakerp), "update_moderator");
 				}
 			}
@@ -816,7 +819,7 @@ void LLIMSpeakerMgr::updateSpeakers(const LLSD& update)
 				}
 				else
 				{
-					llwarns << "bad membership list update " << ll_print_sd(agent_data["transition"]) << llendl;
+					LL_WARNS() << "bad membership list update " << ll_print_sd(agent_data["transition"]) << LL_ENDL;
 				}
 			}
 
@@ -834,7 +837,7 @@ void LLIMSpeakerMgr::updateSpeakers(const LLSD& update)
 					// Fire event only if moderator changed
 					if ( is_moderator != speakerp->mIsModerator )
 					{
-						LL_DEBUGS("Speakers") << "Speaker " << agent_id << (is_moderator ? "is now" : "no longer is") << " a moderator" << llendl;
+						LL_DEBUGS("Speakers") << "Speaker " << agent_id << (is_moderator ? "is now" : "no longer is") << " a moderator" << LL_ENDL;
 						fireEvent(new LLSpeakerUpdateModeratorEvent(speakerp), "update_moderator");
 					}
 				}
@@ -869,8 +872,8 @@ void LLIMSpeakerMgr::updateSpeakers(const LLSD& update)
 			}
 			else
 			{
-				llwarns << "bad membership list update "
-						<< agent_transition << llendl;
+				LL_WARNS() << "bad membership list update "
+						<< agent_transition << LL_ENDL;
 			}
 		}
 	}
@@ -991,7 +994,7 @@ void LLActiveSpeakerMgr::updateSpeakerList()
 	// always populate from active voice channel
 	if (LLVoiceChannel::getCurrentVoiceChannel() != mVoiceChannel) //MA: seems this is always false
 	{
-		LL_DEBUGS("Speakers") << "Removed all speakers" << llendl;
+		LL_DEBUGS("Speakers") << "Removed all speakers" << LL_ENDL;
 		fireEvent(new LLSpeakerListChangeEvent(this, LLUUID::null), "clear");
 		mSpeakers.clear();
 		mSpeakersSorted.clear();
@@ -1040,11 +1043,10 @@ void LLLocalSpeakerMgr::updateSpeakerList()
 
 	// pick up non-voice speakers in chat range
 	uuid_vec_t avatar_ids;
-	std::vector<LLVector3d> positions;
-	LLWorld::getInstance()->getAvatars(&avatar_ids, &positions, gAgent.getPositionGlobal(), CHAT_NORMAL_RADIUS);
-	for(U32 i=0; i<avatar_ids.size(); i++)
+	LLWorld::getInstance()->getAvatars(&avatar_ids, NULL, gAgent.getPositionGlobal(), CHAT_NORMAL_RADIUS);
+	BOOST_FOREACH(const LLUUID& id, avatar_ids)
 	{
-		setSpeaker(avatar_ids[i]);
+		setSpeaker(id);
 	}
 
 	// check if text only speakers have moved out of chat range

@@ -181,7 +181,7 @@ void display_startup()
 
 void display_update_camera(bool tiling=false)
 {
-	llpushcallstacks;
+	LL_PUSH_CALLSTACKS();
 	// TODO: cut draw distance down if customizing avatar?
 	// TODO: cut draw distance on per-parcel basis?
 
@@ -225,8 +225,8 @@ void display_stats()
 	if (fps_log_freq > 0.f && gRecentFPSTime.getElapsedTimeF32() >= fps_log_freq)
 	{
 		F32 fps = gRecentFrameCount / fps_log_freq;
-		llinfos << llformat("FPS: %.02f", fps) << llendl;
-		llinfos << llformat("VBO: %d  glVBO: %d", LLVertexBuffer::sCount, LLVertexBuffer::sGLCount) << llendl;
+		LL_INFOS() << llformat("FPS: %.02f", fps) << LL_ENDL;
+		LL_INFOS() << llformat("VBO: %d  glVBO: %d", LLVertexBuffer::sCount, LLVertexBuffer::sGLCount) << LL_ENDL;
 #ifdef LL_OCTREE_STATS
 		OctreeStats::getInstance()->dump();
 #endif
@@ -238,9 +238,9 @@ void display_stats()
 	{
 		gMemoryAllocated = LLMemory::getCurrentRSS();
 		U32 memory = (U32)(gMemoryAllocated / (1024*1024));
-		llinfos << llformat("MEMORY: %d MB", memory) << llendl;
-		llinfos << "THREADS: "<< LLThread::getCount() << llendl;
-		llinfos << "MALLOC: " << SGMemStat::getPrintableStat() <<llendl;
+		LL_INFOS() << llformat("MEMORY: %d MB", memory) << LL_ENDL;
+		LL_INFOS() << "THREADS: "<< LLThread::getCount() << LL_ENDL;
+		LL_INFOS() << "MALLOC: " << SGMemStat::getPrintableStat() <<LL_ENDL;
 		LLMemory::logMemoryInfo(TRUE) ;
 		gRecentMemoryTime.reset();
 	}
@@ -733,7 +733,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot, boo
 		LLGLState::checkTextureChannels();
 		LLGLState::checkClientArrays();
 
-		BOOL to_texture = gPipeline.canUseVertexShaders() &&
+		BOOL to_texture = LLGLSLShader::sNoFixedFunction &&
 						LLPipeline::sRenderGlow;
 
 		LLAppViewer::instance()->pingMainloopTimeout("Display:Swap");
@@ -815,7 +815,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot, boo
 		// Doing this here gives hardware occlusion queries extra time to complete
 		LLAppViewer::instance()->pingMainloopTimeout("Display:UpdateImages");
 		LLError::LLCallStacks::clear() ;
-		llpushcallstacks ;
+		LL_PUSH_CALLSTACKS();
 		gFrameStats.start(LLFrameStats::IMAGE_UPDATE);
 
 		{
@@ -847,7 +847,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot, boo
 				stop_glerror();
 			}*/
 		}
-		llpushcallstacks ;
+		LL_PUSH_CALLSTACKS();
 		LLGLState::checkStates();
 		LLGLState::checkClientArrays();
 
@@ -959,7 +959,7 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot, boo
 			else
 			{
 				gPipeline.mScreen.bindTarget();
-				if (LLPipeline::sUnderWaterRender && !gPipeline.canUseWindLightShaders())
+				if (LLPipeline::sUnderWaterRender)
 				{
 					const LLColor4 &col = LLDrawPoolWater::sWaterFogColor;
 					glClearColor(col.mV[0], col.mV[1], col.mV[2], 0.f);
@@ -1254,8 +1254,8 @@ LLRect get_whole_screen_region()
 	if (zoom_factor > 1.f)
 	{
 		S32 num_horizontal_tiles = llceil(zoom_factor);
-		S32 tile_width = llmath::llround((F32)gViewerWindow->getWorldViewWidthScaled() / zoom_factor);
-		S32 tile_height = llmath::llround((F32)gViewerWindow->getWorldViewHeightScaled() / zoom_factor);
+		S32 tile_width = ll_round((F32)gViewerWindow->getWorldViewWidthScaled() / zoom_factor);
+		S32 tile_height = ll_round((F32)gViewerWindow->getWorldViewHeightScaled() / zoom_factor);
 		int tile_y = sub_region / num_horizontal_tiles;
 		int tile_x = sub_region - (tile_y * num_horizontal_tiles);
 			
@@ -1343,7 +1343,7 @@ void render_ui(F32 zoom_factor, int subfield, bool tiling)
 	}
 	
 	{
-		BOOL to_texture = gPipeline.canUseVertexShaders() &&
+		BOOL to_texture = LLGLSLShader::sNoFixedFunction &&
 							LLPipeline::sRenderGlow;
 
 		if (to_texture)
@@ -1351,7 +1351,7 @@ void render_ui(F32 zoom_factor, int subfield, bool tiling)
 			gPipeline.renderBloom(gSnapshot, zoom_factor, subfield, tiling);
 		}
 
-		if(gPipeline.canUseVertexShaders())
+		if (LLGLSLShader::sNoFixedFunction)
 		{
 			LLPostProcess::getInstance()->renderEffects(gViewerWindow->getWindowDisplayWidth(), gViewerWindow->getWindowDisplayHeight());
 		}
@@ -1539,8 +1539,8 @@ void render_ui_2d()
 		int pos_y = sub_region / llceil(zoom_factor);
 		int pos_x = sub_region - (pos_y*llceil(zoom_factor));
 		// offset for this tile
-		LLFontGL::sCurOrigin.mX -= llmath::llround((F32)gViewerWindow->getWindowWidthScaled() * (F32)pos_x / zoom_factor);
-		LLFontGL::sCurOrigin.mY -= llmath::llround((F32)gViewerWindow->getWindowHeightScaled() * (F32)pos_y / zoom_factor);
+		LLFontGL::sCurOrigin.mX -= ll_round((F32)gViewerWindow->getWindowWidthScaled() * (F32)pos_x / zoom_factor);
+		LLFontGL::sCurOrigin.mY -= ll_round((F32)gViewerWindow->getWindowHeightScaled() * (F32)pos_y / zoom_factor);
 	}
 
 	stop_glerror();
@@ -1573,7 +1573,7 @@ void render_disconnected_background()
 {
 	if (!gDisconnectedImagep && gDisconnected)
 	{
-		llinfos << "Loading last bitmap..." << llendl;
+		LL_INFOS() << "Loading last bitmap..." << LL_ENDL;
 
 		std::string temp_str;
 		temp_str = gDirUtilp->getLindenUserDir() + gDirUtilp->getDirDelimiter() + SCREEN_LAST_FILENAME;
@@ -1581,14 +1581,14 @@ void render_disconnected_background()
 		LLPointer<LLImageBMP> image_bmp = new LLImageBMP;
 		if( !image_bmp->load(temp_str) )
 		{
-			//llinfos << "Bitmap load failed" << llendl;
+			//LL_INFOS() << "Bitmap load failed" << LL_ENDL;
 			return;
 		}
 		
 		LLPointer<LLImageRaw> raw = new LLImageRaw;
 		if (!image_bmp->decode(raw, 0.0f))
 		{
-			llinfos << "Bitmap decode failed" << llendl;
+			LL_INFOS() << "Bitmap decode failed" << LL_ENDL;
 			gDisconnectedImagep = NULL;
 			return;
 		}

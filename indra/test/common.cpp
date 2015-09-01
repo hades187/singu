@@ -49,7 +49,6 @@
 #include "llsd.h"
 #include "llsdserialize.h"
 #include "u64.h"
-#include "llhash.h"
 
 #if LL_WINDOWS
 // disable overflow warnings
@@ -343,7 +342,7 @@ namespace tut
 /*
 			if(actual != expected)
 			{
-				llwarns << "iteration " << i << llendl;
+				LL_WARNS() << "iteration " << i << LL_ENDL;
 				std::ostringstream e_str;
 				std::string::iterator iter = expected.begin();
 				std::string::iterator end = expected.end();
@@ -353,8 +352,8 @@ namespace tut
 				}
 				e_str << std::endl;
 				llsd_serialize_string(e_str, expected);
-				llwarns << "expected size: " << expected.size() << llendl;
-				llwarns << "expected:      " << e_str.str() << llendl;
+				LL_WARNS() << "expected size: " << expected.size() << LL_ENDL;
+				LL_WARNS() << "expected:      " << e_str.str() << LL_ENDL;
 
 				std::ostringstream a_str;
 				iter = actual.begin();
@@ -365,8 +364,8 @@ namespace tut
 				}
 				a_str << std::endl;
 				llsd_serialize_string(a_str, actual);
-				llwarns << "actual size:   " << actual.size() << llendl;
-				llwarns << "actual:      " << a_str.str() << llendl;
+				LL_WARNS() << "actual size:   " << actual.size() << LL_ENDL;
+				LL_WARNS() << "actual:      " << a_str.str() << LL_ENDL;
 			}
 */
 			ensure_equals("string value", actual, expected);
@@ -637,39 +636,4 @@ namespace tut
 	// llstrtou64 
 	// seems to be deprecated - could not find it being used 
 	// anywhere in the tarball - skipping unit tests for now
-}
-
-
-namespace tut
-{
-	struct hash_data
-	{
-	};
-	typedef test_group<hash_data> hash_test;
-	typedef hash_test::object hash_object;
-	tut::hash_test hash_tester("hash_test");
-
-	template<> template<>
-	void hash_object::test<1>()
-	{
-		const char * str1 = "test string one";
-		const char * same_as_str1 = "test string one";
-
-		size_t hash1 = llhash(str1);
-		size_t same_as_hash1 = llhash(same_as_str1);
-
-
-		ensure("Hashes from identical strings should be equal", hash1 == same_as_hash1);
-		
-		char str[100];
-		strcpy( str, "Another test" );
-
-		size_t hash2 = llhash(str);
-		
-		strcpy( str, "Different string, same pointer" );
-
-		size_t hash3 = llhash(str);
-
-		ensure("Hashes from same pointer but different string should not be equal", hash2 != hash3);
-	}
 }

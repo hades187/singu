@@ -247,7 +247,7 @@ void LLDragHandleTop::reshapeTitleBox()
 	S32 title_width = font->getWidth( getTitleBox()->getText() ) + TITLE_PAD;
 	if (getMaxTitleWidth() > 0)
 		title_width = llmin(title_width, getMaxTitleWidth());
-	S32 title_height = llmath::llround(font->getLineHeight());
+	S32 title_height = ll_round(font->getLineHeight());
 	LLRect title_rect;
 	title_rect.setLeftTopAndSize( 
 		LEFT_PAD, 
@@ -351,13 +351,13 @@ BOOL LLDragHandle::handleHover(S32 x, S32 y, MASK mask)
 		mDragLastScreenY += delta_y;
 
 		getWindow()->setCursor(UI_CURSOR_ARROW);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (active)" <<llendl;		
+		LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (active)" <<LL_ENDL;		
 		handled = TRUE;
 	}
 	else
 	{
 		getWindow()->setCursor(UI_CURSOR_ARROW);
-		lldebugst(LLERR_USER_INPUT) << "hover handled by " << getName() << " (inactive)" << llendl;		
+		LL_DEBUGS("UserInput") << "hover handled by " << getName() << " (inactive)" << LL_ENDL;		
 		handled = TRUE;
 	}
 

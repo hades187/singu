@@ -361,7 +361,7 @@ LLNotifyBox::LLNotifyBox(LLNotificationPtr notification)
 		}
 		
 		if (++sNotifyBoxCount <= 0)
-			llwarns << "A notification was mishandled. sNotifyBoxCount = " << sNotifyBoxCount << llendl;
+			LL_WARNS() << "A notification was mishandled. sNotifyBoxCount = " << sNotifyBoxCount << LL_ENDL;
 		// If this is the only notify box, don't show the next button
 		else if (sNotifyBoxCount == 1 && mNextBtn)
 			mNextBtn->setVisible(false);
@@ -378,7 +378,7 @@ LLButton* LLNotifyBox::addButton(const std::string& name, const std::string& lab
 {
 	// make caution notification buttons slightly narrower
 	// so that 3 of them can fit without overlapping the "next" button
-	S32 btn_width = mIsCaution ? 84 : 90;
+	S32 btn_width = (mIsCaution || mNumOptions >= 3) ? 84 : 90;
 
 	LLRect btn_rect;
 	S32 btn_height= BTN_HEIGHT;
@@ -533,6 +533,7 @@ void LLNotifyBox::close()
 	die();
 	if (not_tip)
 	{
+		--sNotifyBoxCount;
 		if (LLNotifyBox* front = gNotifyBoxView->getFirstNontipBox())
 		{
 			gNotifyBoxView->showOnly(front);
@@ -541,7 +542,6 @@ void LLNotifyBox::close()
 				view->setFocus(true);
 			gFocusMgr.triggerFocusFlash(); // TODO it's ugly to call this here
 		}
-		--sNotifyBoxCount;
 	}
 }
 

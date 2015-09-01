@@ -289,7 +289,7 @@ void LLParticipantList::refreshSpeakers()
 				{
 					// Are they in this sim?
 					if (const LLViewerRegion* regionp = *iter)
-						if (regionp->mMapAvatarIDs.find(speakerp->mID) != -1)
+						if (std::find(regionp->mMapAvatarIDs.begin(), regionp->mMapAvatarIDs.end(), speakerp->mID) != regionp->mMapAvatarIDs.end())
 							found = true;
 				}
 				if (!found)
@@ -490,7 +490,7 @@ void LLParticipantList::toggleMute(const LLSD& userdata, U32 flags)
 	LLPointer<LLSpeaker> speakerp = mSpeakerMgr->findSpeaker(speaker_id);
 	if (speakerp.isNull())
 	{
-		LL_WARNS("Speakers") << "Speaker " << speaker_id << " not found" << llendl;
+		LL_WARNS("Speakers") << "Speaker " << speaker_id << " not found" << LL_ENDL;
 		return;
 	}
 

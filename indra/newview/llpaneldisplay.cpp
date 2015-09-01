@@ -507,11 +507,9 @@ void LLPanelDisplay::refreshEnabledState()
 	//I actually recommend RenderUseFBO:FALSE for ati users when not using deferred, so RenderUseFBO shouldn't control visibility of the element.
 	// Instead, gGLManager.mHasFramebufferObject seems better as it is determined by hardware and not current user settings. -Shyotl
 	//Enabling deferred will force RenderUseFBO to TRUE.
-	BOOL can_defer = gGLManager.mHasFramebufferObject &&
-		LLFeatureManager::getInstance()->isFeatureAvailable("RenderDeferred") && //Ensure it's enabled in the gpu feature table
-		LLFeatureManager::getInstance()->isFeatureAvailable("RenderAvatarVP") && //Hardware Skinning. Deferred forces RenderAvatarVP to true
-		LLFeatureManager::getInstance()->isFeatureAvailable("VertexShaderEnable") && gSavedSettings.getBOOL("VertexShaderEnable") && //Basic Shaders
-		LLFeatureManager::getInstance()->isFeatureAvailable("WindLightUseAtmosShaders") && wlatmos; //Atmospheric Shaders
+	BOOL can_defer = LLPipeline::isRenderDeferredCapable() &&
+		gSavedSettings.getBOOL("VertexShaderEnable") && //Basic Shaders
+		wlatmos; //Atmospheric Shaders
 
 
 	mCtrlDeferred->setEnabled(can_defer);
@@ -906,8 +904,8 @@ void LLPanelDisplay::fractionFromDecimal(F32 decimal_val, S32& numerator, S32& d
 	{
 		if (fmodf((decimal_val * test_denominator) + 0.01f, 1.f) < 0.02f)
 		{
-			numerator = llmath::llround(decimal_val * test_denominator);
-			denominator = llmath::llround(test_denominator);
+			numerator = ll_round(decimal_val * test_denominator);
+			denominator = ll_round(test_denominator);
 			break;
 		}
 	}

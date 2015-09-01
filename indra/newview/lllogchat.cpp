@@ -110,14 +110,14 @@ void LLLogChat::saveHistory(std::string const& filename, std::string line)
 {
 	if(!filename.size())
 	{
-		llinfos << "Filename is Empty!" << llendl;
+		LL_INFOS() << "Filename is Empty!" << LL_ENDL;
 		return;
 	}
 
 	LLFILE* fp = LLFile::fopen(LLLogChat::makeLogFileName(filename), "a"); 		/*Flawfinder: ignore*/
 	if (!fp)
 	{
-		llinfos << "Couldn't open chat history log!" << llendl;
+		LL_INFOS() << "Couldn't open chat history log!" << LL_ENDL;
 	}
 	else
 	{
@@ -134,7 +134,7 @@ void LLLogChat::loadHistory(std::string const& filename , void (*callback)(ELogL
 	bool filename_empty = filename.empty();
 	if (filename_empty)
 	{
-		llwarns << "filename is empty!" << llendl;
+		LL_WARNS() << "filename is empty!" << LL_ENDL;
 	}
 	else while(1)	// So we can use break.
 	{

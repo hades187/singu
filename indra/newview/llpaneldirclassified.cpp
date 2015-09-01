@@ -32,8 +32,6 @@
 
 #include "llviewerprecompiledheaders.h"
 
-#include "llenum.h"
-
 #include "llpaneldirclassified.h"
 
 #include "llclassifiedflags.h"
@@ -174,7 +172,7 @@ void LLPanelDirClassified::onClickDelete()
 
 void LLPanelDirClassified::performQuery()
 {
-	lldebugs << "LLPanelDirClassified::performQuery()" << llendl;
+	LL_DEBUGS() << "LLPanelDirClassified::performQuery()" << LL_ENDL;
 
 	BOOL inc_pg = childGetValue("incpg").asBoolean();
 	BOOL inc_mature = childGetValue("incmature").asBoolean();
