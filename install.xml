@@ -485,9 +485,9 @@
           <key>windows</key>
           <map>
             <key>md5sum</key>
-            <string>b691d56fe977e04492213ca952181de2</string>
+            <string>57daaff787d824a61cfbac4fa1539338</string>
             <key>url</key>
-            <uri>http://depot.alchemyviewer.org/pub/windows/lib/fmodstudio-1.06.01-windows-201504262121.tar.bz2</uri>
+            <uri>http://depot.alchemyviewer.org/pub/windows/lib/fmodstudio-1.06.07-windows-201507231336.tar.bz2</uri>
           </map>
           <key>windows64</key>
           <map>

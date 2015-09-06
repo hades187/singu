@@ -236,7 +236,7 @@ class WindowsManifest(ViewerManifest):
         super(WindowsManifest, self).construct()
         # the final exe is complicated because we're not sure where it's coming from,
         # nor do we have a fixed name for the executable
-        self.path(src='%s/secondlife-bin.exe' % self.args['configuration'], dst=self.final_exe())
+        self.path(src='%s/SingularityAlphaViewer.exe' % self.args['configuration'], dst=self.final_exe())
 
         # Plugin host application
         self.path2basename(os.path.join(os.pardir,
@@ -822,8 +822,8 @@ class LinuxManifest(ViewerManifest):
         #if self.buildtype().lower()=='release':
         #    self.path("secondlife-stripped","bin/"+self.binary_name())
         #else:
-        #    self.path("secondlife-bin","bin/"+self.binary_name())
-        self.path("secondlife-bin","bin/"+self.binary_name())
+        #    self.path("SingularityAlphaViewer","bin/"+self.binary_name())
+        self.path("SingularityAlphaViewer","bin/"+self.binary_name())
 
         if self.prefix(src="", dst="bin"):
             self.path2basename("../llplugin/slplugin", "SLPlugin")

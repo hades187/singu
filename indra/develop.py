@@ -81,7 +81,7 @@ class PlatformSetup(object):
     standalone = 'OFF'
     unattended = 'OFF'
     universal = 'OFF'
-    project_name = 'Singularity'
+    project_name = 'Redshift'
     distcc = True
     cmake_opts = []
     word_size = 32
@@ -723,7 +723,7 @@ class WindowsSetup(PlatformSetup):
                           ' --solution \"' +
                           os.path.join(build_dir,'%s.sln' % self.project_name) +
                           '\" --config ' + self.build_type +
-                          ' --startup secondlife-bin')
+                          ' --startup SingularityAlphaViewer')
             print 'Running vstool %r in %r' % (vstool_cmd, getcwd())
             self.run(vstool_cmd)        
             print >> open(stamp, 'w'), self.build_type

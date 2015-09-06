@@ -90,7 +90,7 @@ add_subdirectory(${LIBS_OPEN_PREFIX}plugins)
 
 add_subdirectory(${VIEWER_PREFIX}newview/statemachine)
 add_subdirectory(${VIEWER_PREFIX}newview)
-add_dependencies(viewer secondlife-bin)
+add_dependencies(viewer SingularityAlphaViewer)
 
 # The use_prebuilt_binary macro in cmake/Prebuilt.cmake records
 # packages in the PREBUILT property of the 'prepare' target.

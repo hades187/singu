@@ -562,8 +562,6 @@ void LLGestureMgr::playGesture(LLMultiGesture* gesture, bool local)
 						break;
 					}
 
-					llwarns << "Animation UUID: (" << anim_id << ")" << llendl;
-
 					mLoadingAssets.insert(anim_id);
 
 					LLUUID* id = new LLUUID(gAgentID);
