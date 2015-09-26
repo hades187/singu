@@ -562,54 +562,9 @@ void LLObjectBackup::exportWorker(void *userdata)
 			//LLSelectMgr::getInstance()->getSelection()->ref(); // Singu Note: Don't do this.
 			// Fall through to EXPORT_CHECK_PERMS
 		}
+
 		case EXPORT_CHECK_PERMS:
 		{
-			struct ff : public LLSelectedNodeFunctor
-			{
-				virtual bool apply(LLSelectNode* node)
-				{
-					return LLObjectBackup::validateNode(node);
-				}
-			} func;
-
-			LLViewerObject* object;
-			object = LLSelectMgr::getInstance()->getSelection()->getPrimaryObject();
-			if (object)
-			{
-				if (LLSelectMgr::getInstance()->getSelection()->applyToNodes(&func, false))
-				{
-					self->mExportState = EXPORT_FETCH_PHYSICS;
-				}
-				else
-				{
-					struct vv : public LLSelectedNodeFunctor
-					{
-						virtual bool apply(LLSelectNode* node)
-						{
-							return node->mValid;
-						}
-					} func2;
-
-					if (LLSelectMgr::getInstance()->getSelection()->applyToNodes(&func2, false))
-					{
-						LL_WARNS() << "Incorrect permission to export" << LL_ENDL;
-						self->mExportState = EXPORT_FAILED;
-						LLSelectMgr::getInstance()->getSelection()->unref();
-					}
-					else
-					{
-						LL_DEBUGS("ObjectBackup") << "Nodes permissions not yet received, delaying..."
-												  << LL_ENDL;
-						self->mExportState = EXPORT_CHECK_PERMS;
-					}
-				}
-			}
-			else
-			{
-				self->mExportState = EXPORT_ABORTED;
-				LLSelectMgr::getInstance()->getSelection()->unref();
-			}
-			break;
 		}
 
 		case EXPORT_FETCH_PHYSICS:

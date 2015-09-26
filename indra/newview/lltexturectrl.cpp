@@ -71,6 +71,8 @@
 // <edit>
 #include "llmenugl.h"
 // </edit>
+#include "llpreview.h"
+#include "llpreviewtexture.h"
 
 // tag: vaa emerald local_asset_browser [begin]
 #include "floaterlocalassetbrowse.h"
@@ -190,6 +192,7 @@ public:
 	static void     onBtnBrowser( void* userdata );
 	static void		onBtnCopy( void* userdata );
 	static void		onBtnPaste( void* userdata );
+	static void		onBtnOpen( void* userdata );
 
 	void			onLocalScrollCommit();
 	// tag: vaa emerald local_asset_browser [end]
@@ -497,6 +500,7 @@ BOOL LLFloaterTexturePicker::postBuild()
 
 	childSetAction("CopyUUID", LLFloaterTexturePicker::onBtnCopy, this);
 	childSetAction("PasteUUID", LLFloaterTexturePicker::onBtnPaste, this);
+	childSetAction("OpenUUID", LLFloaterTexturePicker::onBtnOpen, this);
 
 	mLocalScrollCtrl = getChild<LLScrollListCtrl>("local_name_list");
 	mLocalScrollCtrl->setCommitCallback(boost::bind(&LLFloaterTexturePicker::onLocalScrollCommit, this));
@@ -899,6 +903,33 @@ void LLFloaterTexturePicker::onBtnPaste(void* userdata)
 	LLUUID imageUUID = LLUUID(wstring_to_utf8str(temp_string));
 
 	self->setImageID( imageUUID );
+}
+
+void LLFloaterTexturePicker::onBtnOpen(void* userdata)
+{
+	LLFloaterTexturePicker* self = (LLFloaterTexturePicker*) userdata;
+	LLUUID image_id = self->getAssetID();
+
+	// See if we can bring an existing preview to the front
+	if (!LLPreview::show(image_id))
+	{
+		// There isn't one, so make a new preview
+		S32 left, top;
+		gFloaterView->getNewFloaterPosition(&left, &top);
+		LLRect rect = gSavedSettings.getRect("PreviewTextureRect");
+		rect.translate( left - rect.mLeft, top - rect.mTop );
+
+		LLPreviewTexture* preview;
+		preview = new LLPreviewTexture(image_id.asString(),
+										rect,
+										image_id.asString(),
+										image_id,
+										FALSE);
+		preview->setSourceID(LLUUID::null);
+		preview->setFocus(TRUE);
+
+		gFloaterView->adjustToFitScreen(preview, FALSE);
+	}
 }
 
 // tag: vaa emerald local_asset_browser [begin]

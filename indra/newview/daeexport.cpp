@@ -103,18 +103,13 @@ namespace DAEExportUtil
 			asset_id_matches);
 
 		// See if any of the inventory items matching this texture id are exportable
-		ExportPolicy policy = LFSimFeatureHandler::instance().exportPolicy();
 		for (size_t i = 0; i < items.size(); i++)
 		{
-			const LLPermissions item_permissions = items[i]->getPermissions();
-			if (item_permissions.allowExportBy(gAgentID, policy))
+			if (name != NULL)
 			{
-				if (name != NULL)
-				{
-					(*name) = items[i]->getName();
-				}
-				return true;
+				(*name) = items[i]->getName();
 			}
+			return true;
 		}
 
 		if (name != NULL)
@@ -122,19 +117,11 @@ namespace DAEExportUtil
 			(*name) = id.getString();
 		}
 
-		return (policy & ep_full_perm) == ep_full_perm;
+		return true;
 	}
 
 	static bool canExportNode(LLSelectNode* node)
 	{
-		LLPermissions* perms = node->mPermissions;	// Is perms ever NULL?
-		// This tests the PERM_EXPORT bit too, which is not really necessary (just checking if it's set
-		// on the root prim would suffice), but also isn't hurting.
-		if (!(perms && perms->allowExportBy(gAgentID, LFSimFeatureHandler::instance().exportPolicy())))
-		{
-			return false;
-		}
-
 		// Additionally chack if this is a sculpt
 		LLViewerObject* obj = node->getObject();
 		if (obj->isSculpted() && !obj->isMesh())

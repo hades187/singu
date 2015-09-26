@@ -223,52 +223,6 @@ void WavefrontSaver::Add(const LLViewerObject* some_vo)
 }
 namespace
 {
-	// Identical to the one in daeexport.cpp.
-	bool can_export_node(LLSelectNode* node)
-	{
-		LLPermissions* perms = node->mPermissions;	// Is perms ever NULL?
-		// This tests the PERM_EXPORT bit too, which is not really necessary (just checking if it's set
-		// on the root prim would suffice), but also isn't hurting.
-		if (!(perms && perms->allowExportBy(gAgentID, LFSimFeatureHandler::instance().exportPolicy())))
-		{
-			return false;
-		}
-
-		// Additionally chack if this is a sculpt
-		LLViewerObject* obj = node->getObject();
-		if (obj->isSculpted() && !obj->isMesh())
-		{
-			LLSculptParams *sculpt_params = (LLSculptParams *)obj->getParameterEntry(LLNetworkData::PARAMS_SCULPT);
-			LLUUID sculpt_id = sculpt_params->getSculptTexture();
-
-			// Find inventory items with asset id of the sculpt map
-			LLViewerInventoryCategory::cat_array_t cats;
-			LLViewerInventoryItem::item_array_t items;
-			LLAssetIDMatches asset_id_matches(sculpt_id);
-			gInventory.collectDescendentsIf(LLUUID::null,
-							cats,
-							items,
-							LLInventoryModel::INCLUDE_TRASH,
-							asset_id_matches);
-
-			// See if any of the inventory items matching this sculpt id are exportable
-			for (U32 i = 0; i < items.size(); i++)
-			{
-				const LLPermissions item_permissions = items[i]->getPermissions();
-				if (item_permissions.allowExportBy(gAgentID, LFSimFeatureHandler::instance().exportPolicy()))
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-		else // not sculpt, we already checked generic permissions
-		{
-			return true;
-		}
-	}
-
 	class LFSaveSelectedObjects : public view_listener_t
 	{
 		bool handleEvent(LLPointer<LLOldEvents::LLEvent> event, const LLSD& userdata)
@@ -278,7 +232,9 @@ namespace
 				if (!selection->getFirstRootObject())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
+					{
 						LLNotificationsUtil::add("ExportFailed");
+					}
 					return true;
 				}
 
@@ -290,14 +246,15 @@ namespace
 				{
 					total++;
 					LLSelectNode* node = *iter;
-					if (!can_export_node(node)) continue;
 					included++;
 					wfsaver->Add(node->getObject());
 				}
 				if (wfsaver->obj_v.empty())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
+					{
 						LLNotificationsUtil::add("ExportFailed");
+					}
 					delete wfsaver;
 					return true;
 				}
@@ -373,7 +330,6 @@ void WavefrontSaver::Add(const LLVOAvatar* av_vo) //adds attachments, too!
 				if (!c) continue;
 				if (LLSelectNode* n = LLSelectMgr::getInstance()->getSelection()->findNode(const_cast<LLViewerObject*>(c)))
 				{
-					if (!can_export_node(n)) continue;
 				}
 				else continue;
 				const LLVolume* vol = c->getVolume();
@@ -406,17 +362,14 @@ namespace
 		{
 			if (const LLVOAvatar* avatar = find_avatar_from_object(LLSelectMgr::getInstance()->getSelection()->getPrimaryObject()))
 			{
-				if (!avatar->isSelf())
-				{
-					if (gSavedSettings.getBOOL("OBJExportNotifyFailed")) LLNotificationsUtil::add("ExportFailed");
-					return true;
-				}
 				WavefrontSaver* wfsaver = new WavefrontSaver; // deleted in callback
 				wfsaver->Add(avatar);
 				if (wfsaver->obj_v.empty())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
+					{
 						LLNotificationsUtil::add("ExportFailed");
+					}
 					delete wfsaver;
 					return true;
 				}

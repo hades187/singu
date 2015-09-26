@@ -1404,30 +1404,11 @@ bool LLPanelEditWearable::updatePermissions()
 	LLViewerInventoryItem* item = wearable ? gInventory.getItem(wearable->getItemID()) : NULL;
 	U32 perm_mask = wearable ? PERM_NONE : PERM_ALL;
 	BOOL is_complete = wearable ? FALSE : TRUE;
-	bool can_export = false;
-	bool can_import = false;
-	if (item)
-	{
-		perm_mask = item->getPermissions().getMaskOwner();
-		is_complete = item->isComplete();
-		
-		//Singu note: allow to import values over any modifiable wearable (why not?).
-		{
-			can_import = true;
-	
-			// Exporting (of slider values) is allowed when the wearable is full perm, and owned by and created by the user.
-			// Of course, only modifiable is enough for the user to write down the values and enter them else where... but why make it easy for them to break the ToS.
-			if (is_complete &&
-				(item->getPermissions().allowExportBy(gAgent.getID(), LFSimFeatureHandler::instance().exportPolicy())))
-			{
-				can_export = true;
-			}
-		}
-	}
+
 	setUIPermissions(perm_mask, is_complete);
-	mCustomizeFloater->childSetEnabled("Export", can_export);
-	mCustomizeFloater->childSetEnabled("Import", can_import);
-	return /*(perm_mask & PERM_MODIFY) &&*/ is_complete;
+	mCustomizeFloater->childSetEnabled("Export", true);
+	mCustomizeFloater->childSetEnabled("Import", true);
+	return is_complete;
 }
 
 void LLPanelEditWearable::updateScrollingPanelList()
@@ -1450,10 +1431,9 @@ void LLPanelEditWearable::updateScrollingPanelUI()
 	LLViewerInventoryItem* item = gInventory.getItem(wearable->getItemID());
 	if (item)
 	{
-//		U32 perm_mask = item->getPermissions().getMaskOwner();
 		BOOL is_complete = item->isComplete();
 		LLScrollingPanelParam::sUpdateDelayFrames = 0;
-		mCustomizeFloater->getScrollingPanelList()->updatePanels(/*(perm_mask & PERM_MODIFY) &&*/ is_complete);
+		mCustomizeFloater->getScrollingPanelList()->updatePanels(is_complete);
 	}
 }
 

@@ -2862,17 +2862,16 @@ class LLObjectEnableExport : public view_listener_t
 	bool handleEvent(LLPointer<LLEvent> event, const LLSD& userdata)
 	{
 		ExportPolicy export_policy = LFSimFeatureHandler::instance().exportPolicy();
-		bool can_export_any = false;
 		LLObjectSelectionHandle selection = LLSelectMgr::getInstance()->getSelection();
+
 		for (LLObjectSelection::iterator node = selection->begin(); node != selection->end(); ++node)
 		{
 			if ((*node)->mPermissions->allowExportBy(gAgent.getID(), export_policy))
 			{
-				can_export_any = true;
 				break;
 			}
 		}
-		gMenuHolder->findControl(userdata["control"].asString())->setValue(can_export_any);
+		gMenuHolder->findControl(userdata["control"].asString())->setValue(true);
 		return true;
 	}
 };
