@@ -1867,6 +1867,8 @@ void LLPanelFace::onCancelNormalTexture(const LLSD& data)
 	U8 bumpy = 0;
 	bool identical_bumpy = false;
 	LLSelectedTE::getBumpmap(bumpy, identical_bumpy);
+	LLUUID norm_map_id = mBumpyTextureCtrl->getImageAssetID();
+	bumpy = norm_map_id.isNull() ? bumpy : BUMPY_TEXTURE;
 	sendBump(bumpy);
 }
 
