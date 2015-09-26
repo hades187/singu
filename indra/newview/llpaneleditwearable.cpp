@@ -1401,7 +1401,6 @@ void LLPanelEditWearable::changeCamera(U8 subpart)
 bool LLPanelEditWearable::updatePermissions()
 {
 	LLViewerWearable* wearable = getWearable();
-	LLViewerInventoryItem* item = wearable ? gInventory.getItem(wearable->getItemID()) : NULL;
 	U32 perm_mask = wearable ? PERM_NONE : PERM_ALL;
 	BOOL is_complete = wearable ? FALSE : TRUE;
 
