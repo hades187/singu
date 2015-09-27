@@ -39,6 +39,8 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class LLInventoryModelBackgroundFetch : public LLSingleton<LLInventoryModelBackgroundFetch>
 {
+	friend class LLInventoryModelFetchDescendentsResponder;
+	
 public:
 	LLInventoryModelBackgroundFetch();
 	~LLInventoryModelBackgroundFetch();
@@ -59,22 +61,16 @@ public:
 	bool inventoryFetchInProgress() const;
 
     void findLostItems();	
-	void incrFetchCount(S32 fetching);
-
-	bool isBulkFetchProcessingComplete() const;
-	void setAllFoldersFetched();
-
-	void addRequestAtFront(const LLUUID & id, BOOL recursive, bool is_category);
-	void addRequestAtBack(const LLUUID & id, BOOL recursive, bool is_category);
-
+	void incrFetchCount(S16 fetching);
 protected:
+	bool isBulkFetchProcessingComplete() const;
 	void bulkFetch();
 
 	void backgroundFetch();
 	static void backgroundFetchCB(void*); // background fetch idle function
 
+	void setAllFoldersFetched();
 	bool fetchQueueContainsNoDescendentsOf(const LLUUID& cat_id) const;
-
 private:
  	BOOL mRecursiveInventoryFetchStarted;
 	BOOL mRecursiveLibraryFetchStarted;
@@ -82,7 +78,7 @@ private:
 
 	BOOL mBackgroundFetchActive;		// TRUE if LLInventoryModelBackgroundFetch::backgroundFetchCB is being called from idle().
 	bool mFolderFetchActive;
-	S32 mFetchCount;
+	S16 mFetchCount;
 	BOOL mTimelyFetchPending;
 	S32  mNumFetchRetries;
 
@@ -94,10 +90,8 @@ private:
 
 	struct FetchQueueInfo
 	{
-		FetchQueueInfo(const LLUUID& id, BOOL recursive, bool is_category = true)
-			: mUUID(id),
-			  mIsCategory(is_category),
-			  mRecursive(recursive)
+		FetchQueueInfo(const LLUUID& id, BOOL recursive, bool is_category = true) :
+			mUUID(id), mRecursive(recursive), mIsCategory(is_category)
 		{}
 		LLUUID mUUID;
 		bool mIsCategory;

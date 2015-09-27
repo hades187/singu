@@ -4475,12 +4475,11 @@ void LLAgent::fidget()
 
 void LLAgent::stopFidget()
 {
-	std::vector<LLUUID> anims;
-	anims.reserve(4);
-	anims.push_back(ANIM_AGENT_STAND_1);
-	anims.push_back(ANIM_AGENT_STAND_2);
-	anims.push_back(ANIM_AGENT_STAND_3);
-	anims.push_back(ANIM_AGENT_STAND_4);
+	LLDynamicArray<LLUUID> anims;
+	anims.put(ANIM_AGENT_STAND_1);
+	anims.put(ANIM_AGENT_STAND_2);
+	anims.put(ANIM_AGENT_STAND_3);
+	anims.put(ANIM_AGENT_STAND_4);
 
 	gAgent.sendAnimationRequests(anims, ANIM_REQUEST_STOP);
 }

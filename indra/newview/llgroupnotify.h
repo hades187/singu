@@ -35,6 +35,7 @@
 
 #include "llfontgl.h"
 #include "llpanel.h"
+#include "lldarray.h"
 #include "lltimer.h"
 #include "llviewermessage.h"
 #include "llnotifications.h"

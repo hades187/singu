@@ -47,6 +47,7 @@
 
 // linden library headers
 #include "indra_constants.h"
+#include "lldarray.h"
 #include "lldir.h"
 #include "llerror.h"
 #include "llfasttimer.h"

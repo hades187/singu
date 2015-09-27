@@ -57,14 +57,16 @@
 // Don't define PLATFORM_STRING for unknown platforms - they need
 // to get added to the login cgi script, so we want this to cause an
 // error if we get compiled for a different platform.
-#if LL_WINDOWS
-static const char* PLATFORM_STRING = "win";
+// *FIX: This is misreporting on linux. Change this so that linux is
+// in fact reporting linux.
+#if LL_WINDOWS || LL_LINUX  
+static const char* PLATFORM_STRING = "Win";
 #elif LL_DARWIN
-static const char* PLATFORM_STRING = "mac";
+static const char* PLATFORM_STRING = "Mac";
 #elif LL_LINUX
-static const char* PLATFORM_STRING = "lnx";
+static const char* PLATFORM_STRING = "Lnx";
 #elif LL_SOLARIS
-static const char* PLATFORM_STRING = "sol";
+static const char* PLATFORM_STRING = "Sol";
 #else
 #error("Unknown platform defined!")
 #endif
@@ -131,7 +133,6 @@ void LLUserAuth::authenticate(
 	XMLRPC_VectorAppendString(params, "version", gCurrentVersion.c_str(), 0); // Includes channel name
 	XMLRPC_VectorAppendString(params, "channel", gVersionChannel, 0);
 	XMLRPC_VectorAppendString(params, "platform", PLATFORM_STRING, 0);
-	XMLRPC_VectorAppendString(params, "platform_version", LLAppViewer::instance()->getOSInfo().getOSVersionString().c_str(), 0);
 
 	XMLRPC_VectorAppendString(params, "mac", hashed_mac.c_str(), 0);
 	// A bit of security through obscurity: id0 is volume_serial
@@ -231,7 +232,6 @@ void LLUserAuth::authenticate(
 #endif
 	XMLRPC_VectorAppendString(params, "channel", chan.c_str(), 0);
 	XMLRPC_VectorAppendString(params, "platform", PLATFORM_STRING, 0);
-	XMLRPC_VectorAppendString(params, "platform_version", LLAppViewer::instance()->getOSInfo().getOSVersionString().c_str(), 0);
 
 	XMLRPC_VectorAppendString(params, "mac", hashed_mac.c_str(), 0);
 	// A bit of security through obscurity: id0 is volume_serial

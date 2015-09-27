@@ -39,6 +39,8 @@
 
 #include "llfloater.h"
 
+#include "lldarray.h"
+
 class LLScrollContainer;
 class LLView;
 class LLButton;

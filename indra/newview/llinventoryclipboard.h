@@ -27,6 +27,7 @@
 #ifndef LL_LLINVENTORYCLIPBOARD_H
 #define LL_LLINVENTORYCLIPBOARD_H
 
+#include "lldarray.h"
 #include "lluuid.h"
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,12 +52,12 @@ public:
 	void store(const LLUUID& object);
 
 	// this method stores an array of objects
-	void store(const std::vector<LLUUID>& inventory_objects);
+	void store(const LLDynamicArray<LLUUID>& inventory_objects);
 
 	void cut(const LLUUID& object);
 	// this method gets the objects in the clipboard by copying them
 	// into the array provided.
-	void retrieve(std::vector<LLUUID>& inventory_objects) const;
+	void retrieve(LLDynamicArray<LLUUID>& inventory_objects) const;
 
 	// this method empties out the clipboard
 	void reset();
@@ -72,7 +73,7 @@ public:
 protected:
 	static LLInventoryClipboard sInstance;
 
-	std::vector<LLUUID> mObjects;
+	LLDynamicArray<LLUUID> mObjects;
 	bool mCutMode;
 
 public:

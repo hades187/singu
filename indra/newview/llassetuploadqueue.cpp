@@ -47,7 +47,7 @@ public:
 	LLAssetUploadChainResponder(const LLSD& post_data,
 								const std::string& file_name,
 								const LLUUID& queue_id,
-								U8* data, 
+								char* data, 
 								U32 data_size,
 								std::string script_name,
 								LLAssetUploadQueueSupplier *supplier) :
@@ -129,9 +129,7 @@ public:
 			for(LLSD::array_const_iterator line	= compile_errors.beginArray();
 				line < compile_errors.endArray(); line++)
 			{
-				std::string str = line->asString();
-				str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
-				mSupplier->log(str);
+				mSupplier->log(line->asString());
 				LL_INFOS() << content["errors"] << LL_ENDL;
 			}
 		}
@@ -141,7 +139,7 @@ public:
 	/*virtual*/ char const* getName(void) const { return "LLAssetUploadChainResponder"; }
 
 	LLAssetUploadQueueSupplier *mSupplier;
-	U8* mData;
+	char* mData;
 	U32 mDataSize;
 	std::string mScriptName;
 };
@@ -192,7 +190,7 @@ void LLAssetUploadQueue::queue(const std::string& filename,
 							   BOOL is_running, 
 							   BOOL is_target_mono, 
 							   const LLUUID& queue_id,
-							   U8* script_data,
+							   char* script_data,
 							   U32 data_size,
 							   std::string script_name)
 {

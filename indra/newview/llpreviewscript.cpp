@@ -1120,15 +1120,15 @@ struct LLEntryAndEdCore
 
 void LLScriptEdCore::deleteBridges()
 {
-	S32 count = mBridges.size();
+	S32 count = mBridges.count();
 	LLEntryAndEdCore* eandc;
 	for(S32 i = 0; i < count; i++)
 	{
-		eandc = mBridges.at(i);
+		eandc = mBridges.get(i);
 		delete eandc;
 		mBridges[i] = NULL;
 	}
-	mBridges.clear();
+	mBridges.reset();
 }
 
 // virtual

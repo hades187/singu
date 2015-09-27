@@ -56,6 +56,7 @@ class LLMediaEntry;
 class LLVOVolume;
 class LLMimeDiscoveryResponder;
 class LLPluginCookieStore;
+class AIHTTPHeaders;
 
 typedef LLPointer<LLViewerMediaImpl> viewer_media_t;
 ///////////////////////////////////////////////////////////////////////////////
@@ -91,7 +92,6 @@ public:
 	typedef std::list<LLViewerMediaImpl*> impl_list;
 	
 	typedef std::map<LLUUID, LLViewerMediaImpl*> impl_id_map;
-
 	// Special case early init for just web browser component
 	// so we can show login screen.  See .cpp file for details. JC
 	
@@ -137,7 +137,7 @@ public:
 	static bool isParcelMediaPlaying();
 	static bool isParcelAudioPlaying();
 	
-	static void onAuthSubmit(const LLSD& notification, const LLSD& response);
+	static bool onAuthSubmit(const LLSD& notification, const LLSD& response);
 
 	// Clear all cookies for all plugins
 	static void clearAllCookies();
@@ -169,7 +169,7 @@ public:
 
 	static void setOnlyAudibleMediaTextureID(const LLUUID& texture_id);
 
-	static class AIHTTPHeaders getHeaders();
+	static AIHTTPHeaders getHeaders();
 
 private:
 	static void setOpenIDCookie();

@@ -37,6 +37,7 @@
 #include "v4coloru.h"
 #include "llquaternion.h"
 #include "xform.h"
+#include "lldarrayptr.h"
 #include "llvertexbuffer.h"
 #include "llviewertexture.h"
 #include "llstat.h"
@@ -136,10 +137,10 @@ public:
 	void            setIndexInTex(U32 ch, S32 index) { llassert(ch < LLRender::NUM_TEXTURE_CHANNELS);  mIndexInTex[ch] = index ;}
 
 	void			renderSetColor() const;
-	S32				renderElements() const;
+	S32				renderElements(const U16 *index_array) const;
 	S32				renderIndexed ();
 	S32				renderIndexed (U32 mask);
-	S32				pushVertices() const;
+	S32				pushVertices(const U16* index_array) const;
 	
 	void			setWorldMatrix(const LLMatrix4& mat);
 	const LLTextureEntry* getTextureEntry()	const { return mVObjp->getTE(mTEOffset); }

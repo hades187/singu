@@ -645,10 +645,10 @@ void LLGrassPartition::addGeometryCount(LLSpatialGroup* group, U32& vertex_count
 	mFaceList.clear();
 
 	LLViewerCamera* camera = LLViewerCamera::getInstance();
-	OctreeGuard guard(group->getOctreeNode());
+	OctreeGuard guard(group->mOctreeNode);
 	for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 	{
-		LLDrawable* drawablep = (LLDrawable*)(*i)->getDrawable();
+		LLDrawable* drawablep = *i;
 		
 		if (drawablep->isDead())
 		{
@@ -766,9 +766,8 @@ void LLGrassPartition::getGeometry(LLSpatialGroup* group)
 			LLDrawInfo* info = new LLDrawInfo(start,end,count,offset,facep->getTexture(), 
 				//facep->getTexture(),
 				buffer, fullbright); 
-			const LLVector4a* bounds = group->getObjectExtents();
-			info->mExtents[0] = bounds[0];
-			info->mExtents[1] = bounds[1];
+			info->mExtents[0] = group->mObjectExtents[0];
+			info->mExtents[1] = group->mObjectExtents[1];
 			info->mVSize = vsize;
 			draw_vec.push_back(info);
 			//for alpha sorting

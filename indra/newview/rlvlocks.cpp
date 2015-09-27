@@ -1062,7 +1062,7 @@ void RlvFolderLocks::addFolderLock(const folderlock_source_t& lockSource, ELockP
 // Checked: 2011-03-28 (RLVa-1.3.0g) | Modified: RLVa-1.3.0g
 bool RlvFolderLocks::getLockedFolders(const folderlock_source_t& lockSource, LLInventoryModel::cat_array_t& lockFolders) const
 {
-	S32 cntFolders = lockFolders.size();
+	S32 cntFolders = lockFolders.count();
 	switch (lockSource.first)
 	{
 		case ST_ATTACHMENT:
@@ -1124,13 +1124,13 @@ bool RlvFolderLocks::getLockedFolders(const folderlock_source_t& lockSource, LLI
 		default:
 			return false;
 	};
-	return cntFolders != lockFolders.size();
+	return cntFolders != lockFolders.count();
 }
 
 // Checked: 2011-11-26 (RLVa-1.5.4a) | Modified: RLVa-1.5.4a
 bool RlvFolderLocks::getLockedItems(const LLUUID& idFolder, LLInventoryModel::item_array_t& lockItems) const
 {
-	S32 cntItems = lockItems.size();
+	S32 cntItems = lockItems.count();
 
 	LLInventoryModel::cat_array_t folders; LLInventoryModel::item_array_t items;
 	LLFindWearablesEx f(true, true);	// Collect all worn items
@@ -1140,9 +1140,9 @@ bool RlvFolderLocks::getLockedItems(const LLUUID& idFolder, LLInventoryModel::it
 	std::map<LLUUID, bool> folderLookups; std::map<LLUUID, bool>::const_iterator itLookup;
 
 	bool fItemLocked = false;
-	for (S32 idxItem = 0, cntItem = items.size(); idxItem < cntItem; idxItem++)
+	for (S32 idxItem = 0, cntItem = items.count(); idxItem < cntItem; idxItem++)
 	{
-		LLViewerInventoryItem* pItem = items.at(idxItem);
+		LLViewerInventoryItem* pItem = items.get(idxItem);
 		if (LLAssetType::AT_LINK == pItem->getActualType())
 			pItem = pItem->getLinkedItem();
 		if (!pItem)
@@ -1163,11 +1163,8 @@ bool RlvFolderLocks::getLockedItems(const LLUUID& idFolder, LLInventoryModel::it
 		// Check the parent folders of any links to this item that exist under #RLV
 		if (!fItemLocked)
 		{
-			LLInventoryModel::item_array_t itemLinks;
-			LLInventoryModel::cat_array_t cats;
-			LLLinkedItemIDMatches f(pItem->getUUID());
-			gInventory.collectDescendentsIf(RlvInventory::instance().getSharedRootID(), cats, itemLinks, LLInventoryModel::EXCLUDE_TRASH, f);
-
+			LLInventoryModel::item_array_t itemLinks = 
+				gInventory.collectLinkedItems(pItem->getUUID(), RlvInventory::instance().getSharedRootID());
 			for (LLInventoryModel::item_array_t::iterator itItemLink = itemLinks.begin(); 
 					(itItemLink < itemLinks.end()) && (!fItemLocked); ++itItemLink)
 			{
@@ -1190,7 +1187,7 @@ bool RlvFolderLocks::getLockedItems(const LLUUID& idFolder, LLInventoryModel::it
 			lockItems.push_back(pItem);
 	}
 
-	return cntItems != lockItems.size();
+	return cntItems != lockItems.count();
 }
 
 // Checked: 2011-03-29 (RLVa-1.3.0g) | Added: RLVa-1.3.0g
@@ -1206,7 +1203,7 @@ bool RlvFolderLocks::hasLockedFolderDescendent(const LLUUID& idFolder, int eSour
 
 	LLInventoryModel::cat_array_t folders; LLInventoryModel::item_array_t items;
 	RlvLockedDescendentsCollector f(eSourceTypeMask, ePermMask, eLockTypeMask);
-	gInventory.collectDescendentsIf(idFolder, folders, items, FALSE, f, false);
+	gInventory.collectDescendentsIf(idFolder, folders, items, FALSE, f, FALSE);
 	return !folders.empty();
 }
 
@@ -1307,9 +1304,9 @@ void RlvFolderLocks::refreshLockedLookups() const
 		LLInventoryModel::cat_array_t lockedFolders; const LLUUID& idFolderRoot = gInventory.getRootFolderID();
 		if (getLockedFolders(pLockDescr->lockSource, lockedFolders))
 		{
-			for (S32 idxFolder = 0, cntFolder = lockedFolders.size(); idxFolder < cntFolder; idxFolder++)
+			for (S32 idxFolder = 0, cntFolder = lockedFolders.count(); idxFolder < cntFolder; idxFolder++)
 			{
-				const LLViewerInventoryCategory* pFolder = lockedFolders.at(idxFolder);
+				const LLViewerInventoryCategory* pFolder = lockedFolders.get(idxFolder);
 				if (idFolderRoot != pFolder->getUUID())
 					m_LockedFolderMap.insert(std::pair<LLUUID, const folderlock_descr_t*>(pFolder->getUUID(), pLockDescr));
 				else
@@ -1328,9 +1325,9 @@ void RlvFolderLocks::refreshLockedLookups() const
 	LLInventoryModel::item_array_t lockedItems;
 	if (getLockedItems(LLAppearanceMgr::instance().getCOF(), lockedItems))
 	{
-		for (S32 idxItem = 0, cntItem = lockedItems.size(); idxItem < cntItem; idxItem++)
+		for (S32 idxItem = 0, cntItem = lockedItems.count(); idxItem < cntItem; idxItem++)
 		{
-			const LLViewerInventoryItem* pItem = lockedItems.at(idxItem);
+			const LLViewerInventoryItem* pItem = lockedItems.get(idxItem);
 			switch (pItem->getType())
 			{
 				case LLAssetType::AT_BODYPART:

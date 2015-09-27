@@ -404,10 +404,10 @@ const LLUUID& LLPanelObject::findItemID(const LLUUID& asset_id)
 							LLInventoryModel::INCLUDE_TRASH,
 							asset_id_matches);
 
-	if (items.size())
+	if (items.count())
 	{
 		// search for copyable version first
-		for (U32 i = 0; i < items.size(); i++)
+		for (S32 i = 0; i < items.count(); i++)
 		{
 			LLInventoryItem* itemp = items[i];
 			LLPermissions item_permissions = itemp->getPermissions();

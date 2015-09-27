@@ -1300,18 +1300,18 @@ S32 LLPipeline::setLightingDetail(S32 level)
 	return mLightingDetail;
 }
 
-class LLOctreeDirtyTexture : public OctreeTraveler
+class LLOctreeDirtyTexture : public LLOctreeTraveler<LLDrawable>
 {
 public:
 	const std::set<LLViewerFetchedTexture*>& mTextures;
 
 	LLOctreeDirtyTexture(const std::set<LLViewerFetchedTexture*>& textures) : mTextures(textures) { }
 
-	virtual void visit(const OctreeNode* node)
+	virtual void visit(const LLOctreeNode<LLDrawable>* node)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) node->getListener(0);
 
-		if (!group->hasState(LLSpatialGroup::GEOM_DIRTY) && !group->isEmpty())
+		if (!group->isState(LLSpatialGroup::GEOM_DIRTY) && !group->isEmpty())
 		{
 			for (LLSpatialGroup::draw_map_t::iterator i = group->mDrawMap.begin(); i != group->mDrawMap.end(); ++i)
 			{
@@ -1591,8 +1591,10 @@ void LLPipeline::allocDrawable(LLViewerObject *vobj)
 		LL_ERRS() << "Null object passed to allocDrawable!" << LL_ENDL;
 	}
 
-	LLDrawable *drawable = new LLDrawable(vobj);
+	LLDrawable *drawable = new LLDrawable();
 	vobj->mDrawable = drawable;
+	
+	drawable->mVObjp     = vobj;
 	
 	//encompass completely sheared objects by taking 
 	//the most extreme point possible (<1,1,0.5>)
@@ -1633,7 +1635,7 @@ void LLPipeline::unlinkDrawable(LLDrawable *drawable)
 	if (drawablep->getSpatialGroup())
 	{
 		LLFastTimer t(FTM_REMOVE_FROM_SPATIAL_PARTITION);
-		if (!drawablep->getSpatialGroup()->getSpatialPartition()->remove(drawablep, drawablep->getSpatialGroup()))
+		if (!drawablep->getSpatialGroup()->mSpatialPartition->remove(drawablep, drawablep->getSpatialGroup()))
 		{
 #ifdef LL_RELEASE_FOR_DOWNLOAD
 			LL_WARNS() << "Couldn't remove object from spatial group!" << LL_ENDL;
@@ -2013,7 +2015,7 @@ void check_references(LLSpatialGroup* group, LLDrawable* drawable)
 {
 	for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 	{
-		if (drawable == (LLDrawable*)(*i)->getDrawable())
+		if (drawable == *i)
 		{
 			LL_ERRS() << "LLDrawable deleted while actively reference by LLPipeline." << LL_ENDL;
 		}
@@ -2035,12 +2037,9 @@ void check_references(LLSpatialGroup* group, LLFace* face)
 {
 	for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 	{
-		LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-		if(drawable)
-		{
+		LLDrawable* drawable = *i;
 		check_references(drawable, face);
-	}			
-}
+	}
 }
 
 void LLPipeline::checkReferences(LLFace* face)
@@ -2218,7 +2217,7 @@ BOOL LLPipeline::getVisibleExtents(LLCamera& camera, LLVector3& min, LLVector3& 
 	min = LLVector3(X,X,X);
 	max = LLVector3(-X,-X,-X);
 
-	LLViewerCamera::eCameraID saved_camera_id = LLViewerCamera::sCurCameraID;
+	U32 saved_camera_id = LLViewerCamera::sCurCameraID;
 	LLViewerCamera::sCurCameraID = LLViewerCamera::CAMERA_WORLD;
 
 	BOOL res = TRUE;
@@ -2445,16 +2444,15 @@ void LLPipeline::markNotCulled(LLSpatialGroup* group, LLCamera& camera)
 		return;
 	}
 
-	const LLVector4a* bounds = group->getBounds();
 	if (sMinRenderSize > 0.f && 
-			llmax(llmax(bounds[1][0], bounds[1][1]), bounds[1][2]) < sMinRenderSize)
+			llmax(llmax(group->mBounds[1][0], group->mBounds[1][1]), group->mBounds[1][2]) < sMinRenderSize)
 	{
 		return;
 	}
 
 	assertInitialized();
 	
-	if (!group->getSpatialPartition()->mRenderByGroup)
+	if (!group->mSpatialPartition->mRenderByGroup)
 	{ //render by drawable
 		sCull->pushDrawableGroup(group);
 	}
@@ -2762,7 +2760,7 @@ void LLPipeline::rebuildGroups()
 		{
 			group->rebuildGeom();
 			
-			if (group->getSpatialPartition()->mRenderByGroup)
+			if (group->mSpatialPartition->mRenderByGroup)
 			{
 				count++;
 			}
@@ -3096,23 +3094,23 @@ void LLPipeline::markMeshDirty(LLSpatialGroup* group)
 
 void LLPipeline::markRebuild(LLSpatialGroup* group, BOOL priority)
 {
-	if (group && !group->isDead() && group->getSpatialPartition())
+	if (group && !group->isDead() && group->mSpatialPartition)
 	{
-		if (group->getSpatialPartition()->mPartitionType == LLViewerRegion::PARTITION_HUD)
+		if (group->mSpatialPartition->mPartitionType == LLViewerRegion::PARTITION_HUD)
 		{
 			priority = TRUE;
 		}
 
 		if (priority)
 		{
-			if (!group->hasState(LLSpatialGroup::IN_BUILD_Q1))
+			if (!group->isState(LLSpatialGroup::IN_BUILD_Q1))
 			{
 				llassert_always(!mGroupQ1Locked);
 
 				mGroupQ1.push_back(group);
 				group->setState(LLSpatialGroup::IN_BUILD_Q1);
 
-				if (group->hasState(LLSpatialGroup::IN_BUILD_Q2))
+				if (group->isState(LLSpatialGroup::IN_BUILD_Q2))
 				{
 					LLSpatialGroup::sg_vector_t::iterator iter = std::find(mGroupQ2.begin(), mGroupQ2.end(), group);
 					if (iter != mGroupQ2.end())
@@ -3123,7 +3121,7 @@ void LLPipeline::markRebuild(LLSpatialGroup* group, BOOL priority)
 				}
 			}
 		}
-		else if (!group->hasState(LLSpatialGroup::IN_BUILD_Q2 | LLSpatialGroup::IN_BUILD_Q1))
+		else if (!group->isState(LLSpatialGroup::IN_BUILD_Q2 | LLSpatialGroup::IN_BUILD_Q1))
 		{
 			llassert_always(!mGroupQ2Locked);
 			//LL_ERRS() << "Non-priority updates not yet supported!" << LL_ENDL;
@@ -3201,10 +3199,10 @@ void LLPipeline::stateSort(LLCamera& camera, LLCullResult &result)
 		else
 		{
 			group->setVisible();
-			OctreeGuard guard(group->getOctreeNode());
+			OctreeGuard guard(group->mOctreeNode);
 			for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 			{
-				markVisible((LLDrawable*)(*i)->getDrawable(), camera);
+				markVisible(*i, camera);
 			}
 
 			if (!sDelayVBUpdate)
@@ -3289,10 +3287,10 @@ void LLPipeline::stateSort(LLSpatialGroup* group, LLCamera& camera)
 {
 	if (!sSkipUpdate && group->changeLOD())
 	{
-		OctreeGuard guard(group->getOctreeNode());
+		OctreeGuard guard(group->mOctreeNode);
 		for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 		{
-			LLDrawable* drawablep = (LLDrawable*)(*i)->getDrawable();
+			LLDrawable* drawablep = *i;
 			stateSort(drawablep, camera);
 		}
 
@@ -3415,10 +3413,10 @@ void forAllDrawables(LLCullResult::sg_iterator begin,
 {
 	for (LLCullResult::sg_iterator i = begin; i != end; ++i)
 	{
-		OctreeGuard guard((*i)->getOctreeNode());
+		OctreeGuard guard((*i)->mOctreeNode);
 		for (LLSpatialGroup::element_iter j = (*i)->getDataBegin(); j != (*i)->getDataEnd(); ++j)
 		{
-			func((LLDrawable*)(*j)->getDrawable());	
+			func(*j);	
 		}
 	}
 }
@@ -3655,7 +3653,7 @@ void LLPipeline::postSort(LLCamera& camera)
 			continue;
 		}
 
-		if (group->hasState(LLSpatialGroup::NEW_DRAWINFO) && group->hasState(LLSpatialGroup::GEOM_DIRTY))
+		if (group->isState(LLSpatialGroup::NEW_DRAWINFO) && group->isState(LLSpatialGroup::GEOM_DIRTY))
 		{ //no way this group is going to be drawable without a rebuild
 			group->rebuildGeom();
 		}
@@ -3693,7 +3691,7 @@ void LLPipeline::postSort(LLCamera& camera)
 		
 			if (alpha != group->mDrawMap.end())
 			{ //store alpha groups for sorting
-				LLSpatialBridge* bridge = group->getSpatialPartition()->asBridge();
+				LLSpatialBridge* bridge = group->mSpatialPartition->asBridge();
 				if (LLViewerCamera::sCurCameraID == LLViewerCamera::CAMERA_WORLD)
 				{
 					if (bridge)
@@ -4914,7 +4912,7 @@ void LLPipeline::renderDebug()
 				continue;
 			}
 
-			LLSpatialBridge* bridge = group->getSpatialPartition()->asBridge();
+			LLSpatialBridge* bridge = group->mSpatialPartition->asBridge();
 
 			if (bridge && (!bridge->mDrawable || bridge->mDrawable->isDead()))
 			{
@@ -7301,11 +7299,6 @@ void LLPipeline::renderBloom(BOOL for_snapshot, F32 zoom_factor, int subfield, b
 
 				drawFullScreenRect(LLVertexBuffer::MAP_VERTEX | LLVertexBuffer::MAP_TEXCOORD0);
 
-				if (channel > -1)
-				{
-					gGL.getTexUnit(channel)->setTextureFilteringOption(LLTexUnit::TFO_POINT);
-				}
-
 				unbindDeferredShader(*shader);
 
 				if (multisample)
@@ -7328,7 +7321,6 @@ void LLPipeline::renderBloom(BOOL for_snapshot, F32 zoom_factor, int subfield, b
 			if (channel > -1)
 			{
 				mScreen.bindTexture(0, channel);
-				gGL.getTexUnit(channel)->setTextureFilteringOption(LLTexUnit::TFO_BILINEAR);
 			}
 			
 			if (!LLViewerCamera::getInstance()->cameraUnderWater())
@@ -7339,11 +7331,6 @@ void LLPipeline::renderBloom(BOOL for_snapshot, F32 zoom_factor, int subfield, b
 			}
 
 			drawFullScreenRect(LLVertexBuffer::MAP_VERTEX | LLVertexBuffer::MAP_TEXCOORD0);
-
-			if (channel > -1)
-			{
-				gGL.getTexUnit(channel)->setTextureFilteringOption(LLTexUnit::TFO_POINT);
-			}
 
 			unbindDeferredShader(*shader);
 
@@ -7371,7 +7358,6 @@ void LLPipeline::renderBloom(BOOL for_snapshot, F32 zoom_factor, int subfield, b
 			if (channel > -1)
 			{
 				mDeferredLight.bindTexture(0, channel);
-				gGL.getTexUnit(channel)->setTextureFilteringOption(LLTexUnit::TFO_BILINEAR);
 			}
 						
 			drawFullScreenRect(LLVertexBuffer::MAP_VERTEX);
@@ -9959,7 +9945,7 @@ void LLPipeline::generateSunShadow(LLCamera& camera)
 				mShadowFrustPoints[j].clear();
 			}
 
-			LLViewerCamera::sCurCameraID = LLViewerCamera::eCameraID(LLViewerCamera::CAMERA_SHADOW0+j);
+			LLViewerCamera::sCurCameraID = LLViewerCamera::CAMERA_SHADOW0+j;
 
 			//restore render matrices
 			glh_set_current_modelview(saved_view);
@@ -10318,7 +10304,7 @@ void LLPipeline::generateSunShadow(LLCamera& camera)
 		//update shadow targets
 		for (U32 i = 0; i < 2; i++)
 		{ //for each current shadow
-			LLViewerCamera::sCurCameraID = LLViewerCamera::eCameraID(LLViewerCamera::CAMERA_SHADOW4 + i);
+			LLViewerCamera::sCurCameraID = LLViewerCamera::CAMERA_SHADOW4+i;
 
 			if (mShadowSpotLight[i].notNull() && 
 				(mShadowSpotLight[i] == mTargetShadowSpotLight[0] ||
@@ -10430,7 +10416,7 @@ void LLPipeline::generateSunShadow(LLCamera& camera)
 
 			static LLCullResult result[2];
 
-			LLViewerCamera::sCurCameraID = LLViewerCamera::eCameraID(LLViewerCamera::CAMERA_SHADOW0 + i + 4);
+			LLViewerCamera::sCurCameraID = LLViewerCamera::CAMERA_SHADOW0+i+4;
 
 			renderShadow(view[i+4], proj[i+4], shadow_cam, result[i], FALSE, FALSE, target_width);
 
@@ -10477,7 +10463,7 @@ void LLPipeline::renderGroups(LLRenderPass* pass, U32 type, U32 mask, BOOL textu
 		LLSpatialGroup* group = *i;
 		if (!group->isDead() &&
 			(!sUseOcclusion || !group->isOcclusionState(LLSpatialGroup::OCCLUDED)) &&
-			gPipeline.hasRenderType(group->getSpatialPartition()->mDrawableType) &&
+			gPipeline.hasRenderType(group->mSpatialPartition->mDrawableType) &&
 			group->mDrawMap.find(type) != group->mDrawMap.end())
 		{
 			pass->renderGroup(group,type,mask,texture);

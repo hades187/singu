@@ -36,6 +36,7 @@
 // This class manages the data coming in for viewer layers from the network.
 
 #include "stdtypes.h"
+#include "lldarray.h"
 
 class LLVLData;
 class LLViewerRegion;
@@ -60,7 +61,7 @@ public:
 	void cleanupData(LLViewerRegion *regionp);
 protected:
 
-	std::vector<LLVLData *> mPacketData;
+	LLDynamicArray<LLVLData *> mPacketData;
 	U32 mLandBits;
 	U32 mWindBits;
 	U32 mCloudBits;

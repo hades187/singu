@@ -319,7 +319,7 @@ public:
 	//
 
 	LLSD	packMessage() const;
-	void	unpackMessage(const LLSD& perms);
+	void	unpackMessage(LLSD perms);
 
 	// For messaging system support
 	void	packMessage(LLMessageSystem* msg) const;

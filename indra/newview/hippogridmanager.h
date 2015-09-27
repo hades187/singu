@@ -90,6 +90,8 @@ public:
 	void setRealCurrencySymbol(const std::string& sym);
 	void setClassifiedFee(int fee) { mClassifiedFee = fee; }
 	void setDirectoryFee(int fee) { mDirectoryFee = fee; }
+	bool supportsInvLinks();
+	void setSupportsInvLinks(bool b);
 	bool getAutoUpdate();
 	bool getLocked() { return mLocked; }
 
@@ -117,6 +119,7 @@ private:
 	bool mIsInProductionGrid;
 	bool mIsInAvination;
 	bool mRenderCompat;
+	bool mInvLinks;
 	bool mAutoUpdate;
 	bool mLocked;
 	bool mUPCSupported;

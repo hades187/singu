@@ -36,6 +36,7 @@
 #include "stdtypes.h"
 #include "lltimer.h"
 #include "v3dmath.h"
+#include "lldarray.h"
 
 // Class that drives the agent around according to a "script".
 
@@ -91,7 +92,7 @@ private:
 		F64				mTime;
 	};
 
-	std::vector<Action>		mActions;
+	LLDynamicArray<Action>	mActions;
 	LLTimer					mTimer;
 };
 

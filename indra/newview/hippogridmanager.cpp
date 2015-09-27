@@ -56,6 +56,7 @@ HippoGridInfo::HippoGridInfo(const std::string& gridName) :
 	mIsInProductionGrid(false),
 	mIsInAvination(false),
 	mRenderCompat(true),
+	mInvLinks(false),
 	mAutoUpdate(false),
 	mLocked(false),
 	mMaxAgentGroups(-1),
@@ -535,6 +536,23 @@ void HippoGridInfo::initFallback()
 	FALLBACK_GRIDINFO.setHelperUri("http://127.0.0.1:9000/");
 }
 
+bool HippoGridInfo::supportsInvLinks()
+{
+	if(isSecondLife())
+		return true;
+	else
+		return mInvLinks;
+}
+
+void HippoGridInfo::setSupportsInvLinks(bool b)
+{
+	if (b == true && mInvLinks == false)
+	{
+		LL_INFOS() << "Inventory Link support detected" << LL_ENDL;
+	}
+	mInvLinks = b;
+}
+
 bool HippoGridInfo::getAutoUpdate()
 {
 	if(isSecondLife())
@@ -897,6 +915,7 @@ void HippoGridManager::parseData(LLSD &gridInfo, bool mergeIfNewer)
 			if (gridMap.has("password")) grid->setPasswordUrl(gridMap["password"]);
 			if (gridMap.has("search")) grid->setSearchUrl(gridMap["search"]);
 			if (gridMap.has("render_compat")) grid->setRenderCompat(gridMap["render_compat"]);
+			if (gridMap.has("inventory_links")) grid->setSupportsInvLinks(gridMap["inventory_links"]);
 			if (gridMap.has("auto_update")) grid->mAutoUpdate = gridMap["auto_update"];
 			if (gridMap.has("locked")) grid->mLocked = gridMap["locked"];
 			if (newGrid) addGrid(grid);
@@ -933,6 +952,7 @@ void HippoGridManager::saveFile()
 		
 		gridInfo[i]["search"] = grid->getSearchUrl();
 		gridInfo[i]["render_compat"] = grid->isRenderCompat();
+		gridInfo[i]["inventory_links"] = grid->supportsInvLinks();
 		gridInfo[i]["auto_update"] = grid->getAutoUpdate();
 		gridInfo[i]["locked"] = grid->getLocked();
 	}

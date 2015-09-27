@@ -109,7 +109,6 @@ set(viewer_SOURCE_FILES
     lggdicdownload.cpp
     lgghunspell_wrapper.cpp
     llaccountingcostmanager.cpp
-    llaisapi.cpp
     llagent.cpp
     llagentaccess.cpp
     llagentcamera.cpp
@@ -297,7 +296,6 @@ set(viewer_SOURCE_FILES
     llgroupnotify.cpp
     llhomelocationresponder.cpp
     llhoverview.cpp
-    llhttpretrypolicy.cpp
     llhudeffect.cpp
     llhudeffectbeam.cpp
     llhudeffectlookat.cpp
@@ -523,7 +521,6 @@ set(viewer_SOURCE_FILES
     llviewerobject.cpp
     llviewerobjectbackup.cpp
     llviewerobjectlist.cpp
-    llvieweroctree.cpp
     llviewerparcelmedia.cpp
     llviewerparcelmediaautoplay.cpp
     llviewerparcelmgr.cpp
@@ -604,7 +601,7 @@ set(viewer_SOURCE_FILES
     )
 
 # This gets renamed in the packaging step
-set(VIEWER_BINARY_NAME "SingularityAlphaViewer" CACHE STRING
+set(VIEWER_BINARY_NAME "SingularityAlpha" CACHE STRING
     "The name of the viewer executable to create.")
 
 set(viewer_HEADER_FILES
@@ -641,7 +638,6 @@ set(viewer_HEADER_FILES
     lggdicdownload.h
     lgghunspell_wrapper.h
     llaccountingcostmanager.h
-    llaisapi.h
     llagent.h
     llagentaccess.h
     llagentcamera.h
@@ -828,7 +824,6 @@ set(viewer_HEADER_FILES
     llgroupactions.h
     llgroupmgr.h
     llgroupnotify.h
-    llhttpretrypolicy.h
     llhomelocationresponder.h
     llhoverview.h
     llhudeffect.h
@@ -1060,7 +1055,6 @@ set(viewer_HEADER_FILES
     llviewerobject.h
     llviewerobjectbackup.h
     llviewerobjectlist.h
-    llvieweroctree.h
     llviewerparcelmedia.h
     llviewerparcelmediaautoplay.h
     llviewerparcelmgr.h

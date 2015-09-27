@@ -162,7 +162,7 @@ void LLAvatarActions::offerTeleport(const LLUUID& invitee)
 	if (invitee.isNull())
 		return;
 
-	std::vector<LLUUID> ids;
+	LLDynamicArray<LLUUID> ids;
 	ids.push_back(invitee);
 	offerTeleport(ids);
 }
@@ -258,6 +258,8 @@ void LLAvatarActions::startAdhocCall(const uuid_vec_t& ids)
 		return;
 	}
 
+	// convert vector into LLDynamicArray for addSession
+	LLDynamicArray<LLUUID> id_array;
 	for (uuid_vec_t::const_iterator it = ids.begin(); it != ids.end(); ++it)
 	{
 // [RLVa:KB] - Checked: 2011-04-11 (RLVa-1.3.0)
@@ -268,6 +270,7 @@ void LLAvatarActions::startAdhocCall(const uuid_vec_t& ids)
 			RlvUtil::notifyBlocked(RLV_STRING_BLOCKED_STARTCONF);
 			return;
 		}
+		id_array.push_back(idAgent);
 // [/RLVa:KB]
 //		id_array.push_back(*it);
 	}
@@ -275,7 +278,7 @@ void LLAvatarActions::startAdhocCall(const uuid_vec_t& ids)
 	// create the new ad hoc voice session
 	const std::string title = LLTrans::getString("conference-title");
 	LLUUID session_id = gIMMgr->addSession(title, IM_SESSION_CONFERENCE_START,
-										   ids[0], ids);
+										   ids[0], id_array);
 	if (session_id.isNull())
 	{
 		return;

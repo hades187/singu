@@ -760,7 +760,7 @@ static LLFastTimer::DeclareTimer FTM_REBUILD_PARTICLE_VBO("Particle VBO");
 
 void LLParticlePartition::rebuildGeom(LLSpatialGroup* group)
 {
-	if (group->isDead() || !group->hasState(LLSpatialGroup::GEOM_DIRTY))
+	if (group->isDead() || !group->isState(LLSpatialGroup::GEOM_DIRTY))
 	{
 		return;
 	}
@@ -806,10 +806,10 @@ void LLParticlePartition::addGeometryCount(LLSpatialGroup* group, U32& vertex_co
 	mFaceList.clear();
 
 	LLViewerCamera* camera = LLViewerCamera::getInstance();
-	OctreeGuard guard(group->getOctreeNode());
+	OctreeGuard guard(group->mOctreeNode);
 	for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 	{
-		LLDrawable* drawablep = (LLDrawable*)(*i)->getDrawable();
+		LLDrawable* drawablep = *i;
 		
 		if (drawablep->isDead())
 		{
@@ -976,9 +976,8 @@ void LLParticlePartition::getGeometry(LLSpatialGroup* group)
 			LLDrawInfo* info = new LLDrawInfo(start,end,count,offset,facep->getTexture(), 
 				//facep->getTexture(),
 				buffer, fullbright); 
-			const LLVector4a* bounds = group->getBounds();
-			info->mExtents[0] = bounds[0];
-			info->mExtents[1] = bounds[1];
+			info->mExtents[0] = group->mObjectExtents[0];
+			info->mExtents[1] = group->mObjectExtents[1];
 			info->mVSize = vsize;
 			info->mBlendFuncDst = bf_dst;
 			info->mBlendFuncSrc = bf_src;

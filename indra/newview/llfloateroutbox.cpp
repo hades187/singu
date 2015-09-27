@@ -328,7 +328,7 @@ void LLFloaterOutbox::updateFolderCount()
 			LLInventoryModel::item_array_t * items;
 			gInventory.getDirectDescendentsOf(mOutboxId, cats, items);
 
-			item_count = cats->size() + items->size();
+			item_count = cats->count() + items->count();
 		}
 
 		mOutboxItemCount = item_count;

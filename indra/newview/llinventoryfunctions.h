@@ -186,13 +186,6 @@ protected:
 	LLAssetType::EType mType;
 };
 
-class LLIsValidItemLink : public LLInventoryCollectFunctor
-{
-public:
-	virtual bool operator()(LLInventoryCategory* cat,
-							LLInventoryItem* item);
-};
-
 class LLIsTypeWithPermissions : public LLInventoryCollectFunctor
 {
 public:

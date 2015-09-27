@@ -66,8 +66,8 @@ static LLFastTimer::DeclareTimer FTM_HUD_EFFECTS("Hud Effects");
 void LLHUDManager::updateEffects()
 {
 	LLFastTimer ftm(FTM_HUD_EFFECTS);
-	U32 i;
-	for (i = 0; i < mHUDEffects.size(); i++)
+	S32 i;
+	for (i = 0; i < mHUDEffects.count(); i++)
 	{
 		LLHUDEffect *hep = mHUDEffects[i];
 		if (hep->isDead())
@@ -84,8 +84,8 @@ void LLHUDManager::sendEffects()
 	static LLCachedControl<bool> disable_pointat_effect(gSavedSettings, "DisablePointAtAndBeam", false);
 	static LLCachedControl<bool> broadcast_viewer_effects(gSavedSettings, "BroadcastViewerEffects", true);
 
-	U32 i;
-	for (i = 0; i < mHUDEffects.size(); i++)
+	S32 i;
+	for (i = 0; i < mHUDEffects.count(); i++)
 	{
 		LLHUDEffect *hep = mHUDEffects[i];
 		if (hep->mType == LLHUDObject::LL_HUD_EFFECT_LOOKAT)
@@ -136,18 +136,18 @@ void LLHUDManager::sendEffects()
 //static
 void LLHUDManager::shutdownClass()
 {
-	getInstance()->mHUDEffects.clear();
+	getInstance()->mHUDEffects.reset();
 }
 
 void LLHUDManager::cleanupEffects()
 {
-	U32 i = 0;
+	S32 i = 0;
 
-	while (i < mHUDEffects.size())
+	while (i < mHUDEffects.count())
 	{
 		if (mHUDEffects[i]->isDead())
 		{
-			mHUDEffects.erase(mHUDEffects.begin() + i);
+			mHUDEffects.remove(i);
 		}
 		else
 		{
@@ -171,7 +171,7 @@ LLHUDEffect *LLHUDManager::createViewerEffect(const U8 type, BOOL send_to_sim, B
 	hep->setNeedsSendToSim(send_to_sim);
 	hep->setOriginatedHere(originated_here);
 
-	mHUDEffects.push_back(hep);
+	mHUDEffects.put(hep);
 	return hep;
 }
 
@@ -194,21 +194,21 @@ void LLHUDManager::processViewerEffect(LLMessageSystem *mesgsys, void **user_dat
 	{
 		effectp = NULL;
 		LLHUDEffect::getIDType(mesgsys, k, effect_id, effect_type);
-		U32 i;
-		for (i = 0; i < LLHUDManager::getInstance()->mHUDEffects.size(); i++)
+		S32 i;
+		for (i = 0; i < LLHUDManager::getInstance()->mHUDEffects.count(); i++)
 		{
 			LLHUDEffect *cur_effectp = LLHUDManager::getInstance()->mHUDEffects[i];
 			if (!cur_effectp)
 			{
 				LL_WARNS() << "Null effect in effect manager, skipping" << LL_ENDL;
-				LLHUDManager::getInstance()->mHUDEffects.erase(LLHUDManager::getInstance()->mHUDEffects.begin() + i);
+				LLHUDManager::getInstance()->mHUDEffects.remove(i);
 				i--;
 				continue;
 			}
 			if (cur_effectp->isDead())
 			{
 	//			LL_WARNS() << "Dead effect in effect manager, removing" << LL_ENDL;
-				LLHUDManager::getInstance()->mHUDEffects.erase(LLHUDManager::getInstance()->mHUDEffects.begin() + i);
+				LLHUDManager::getInstance()->mHUDEffects.remove(i);
 				i--;
 				continue;
 			}

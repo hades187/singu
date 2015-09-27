@@ -73,6 +73,7 @@
 #include "v4math.h"
 #include "v4color.h"
 #include "llmemory.h"
+#include "lldarray.h"
 
 #include "llframetimer.h"
 

@@ -176,7 +176,7 @@ void LLCloseAllFoldersFunctor::doItem(LLFolderViewItem* item)
 
 // Default constructor
 LLFolderView::LLFolderView( const std::string& name,
-						   const LLRect& rect, const LLUUID& source_id, LLPanel* parent_panel, LLFolderViewEventListener* listener, LLFolderViewGroupedItemModel* group_model ) :
+						   const LLRect& rect, const LLUUID& source_id, LLPanel* parent_panel, LLFolderViewEventListener* listener ) :
 #if LL_WINDOWS
 #pragma warning( push )
 #pragma warning( disable : 4355 ) // warning C4355: 'this' : used in base member initializer list
@@ -211,8 +211,7 @@ LLFolderView::LLFolderView( const std::string& name,
 	mUseEllipses(FALSE),
 	mDraggingOverItem(NULL),
 	mStatusTextBox(NULL),
-	mSearchType(1),
-	mGroupedItemModel(group_model)
+	mSearchType(1)
 {
 	LLPanel* panel = parent_panel;
 	mParentPanel = panel->getHandle();
@@ -1054,9 +1053,9 @@ void LLFolderView::removeCutItems()
 		return;
 
 	// Get the list of clipboard item uuids and iterate through them
-	std::vector<LLUUID> objects;
+	LLDynamicArray<LLUUID> objects;
 	LLInventoryClipboard::instance().retrieve(objects);
-	for (std::vector<LLUUID>::const_iterator iter = objects.begin();
+	for (LLDynamicArray<LLUUID>::const_iterator iter = objects.begin();
 		 iter != objects.end();
 		 ++iter)
 	{
@@ -1124,7 +1123,7 @@ void LLFolderView::removeSelectedItems( void )
 		}
 		else if (count > 1)
 		{
-			std::vector<LLFolderViewEventListener*> listeners;
+			LLDynamicArray<LLFolderViewEventListener*> listeners;
 			LLFolderViewEventListener* listener;
 			LLFolderViewItem* last_item = items[count - 1];
 			LLFolderViewItem* new_selection = last_item->getNextOpenNode(FALSE);
@@ -1152,12 +1151,12 @@ void LLFolderView::removeSelectedItems( void )
 			for(S32 i = 0; i < count; ++i)
 			{
 				listener = items[i]->getListener();
-				if(listener && (std::find(listeners.begin(), listeners.end(), listener) == listeners.end()))
+				if(listener && (listeners.find(listener) == LLDynamicArray<LLFolderViewEventListener*>::FAIL))
 				{
-					listeners.push_back(listener);
+					listeners.put(listener);
 				}
 			}
-			listener = listeners.at(0);
+			listener = listeners.get(0);
 			if(listener)
 			{
 				listener->removeBatch(listeners);
@@ -2361,14 +2360,6 @@ void LLFolderView::updateMenuOptions(LLMenuGL* menu)
 		LLFolderViewItem* selected_item = (*item_itor);
 		selected_item->buildContextMenu(*menu, flags);
 		flags = 0x0;
-	}
-
-	// This adds a check for restrictions based on the entire
-	// selection set - for example, any one wearable may not push you
-	// over the limit, but all wearables together still might.
-	if (getFolderViewGroupedItemModel())
-	{
-		getFolderViewGroupedItemModel()->groupFilterContextMenu(mSelectedItems, *menu);
 	}
 
 	addNoOptions(menu);

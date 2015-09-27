@@ -122,15 +122,6 @@ namespace DAEExportUtil
 
 	static bool canExportNode(LLSelectNode* node)
 	{
-		// Additionally chack if this is a sculpt
-		LLViewerObject* obj = node->getObject();
-		if (obj->isSculpted() && !obj->isMesh())
-		{
-			LLSculptParams *sculpt_params = (LLSculptParams *)obj->getParameterEntry(LLNetworkData::PARAMS_SCULPT);
-			LLUUID sculpt_id = sculpt_params->getSculptTexture();
-			return canExportTexture(sculpt_id);
-		}
-		else // not sculpt, we already checked generic permissions
 		{
 			return true;
 		}

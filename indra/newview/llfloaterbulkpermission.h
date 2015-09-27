@@ -34,6 +34,7 @@
 #ifndef LL_LLBULKPERMISSION_H
 #define LL_LLBULKPERMISSION_H
 
+#include "lldarray.h"
 #include "llinventory.h"
 #include "llviewerobject.h"
 #include "llvoinventorylistener.h"
@@ -81,7 +82,7 @@ private:
 	void onUncheckAll() { doCheckUncheckAll(FALSE); }
 	
 	// returns true if this is done
-	BOOL isDone() const { return (mCurrentObjectID.isNull() || (mObjectIDs.size() == 0)); }
+	BOOL isDone() const { return (mCurrentObjectID.isNull() || (mObjectIDs.count() == 0)); }
 
 	//Read the settings and Apply the permissions
 	void doApply();
@@ -89,7 +90,7 @@ private:
 
 private:
 	// Object Queue
-	std::vector<LLUUID> mObjectIDs;
+	LLDynamicArray<LLUUID> mObjectIDs;
 	LLUUID mCurrentObjectID;
 	BOOL mDone;
 

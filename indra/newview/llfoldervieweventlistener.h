@@ -25,6 +25,7 @@
 #ifndef LLFOLDERVIEWEVENTLISTENER_H
 #define LLFOLDERVIEWEVENTLISTENER_H
 
+#include "lldarray.h"	// *TODO: convert to std::vector
 #include "llfoldertype.h"
 #include "llfontgl.h"	// just for StyleFlags enum
 #include "llinventorytype.h"
@@ -71,7 +72,7 @@ public:
 	virtual BOOL isItemRemovable( void ) const = 0;		// Can be destroyed
 	virtual BOOL isItemInTrash( void) const { return FALSE; } // TODO: make into pure virtual.
 	virtual BOOL removeItem() = 0;
-	virtual void removeBatch(std::vector<LLFolderViewEventListener*>& batch) = 0;
+	virtual void removeBatch(LLDynamicArray<LLFolderViewEventListener*>& batch) = 0;
 	virtual void move( LLFolderViewEventListener* parent_listener ) = 0;
 	virtual BOOL isItemCopyable() const = 0;
 	virtual BOOL copyToClipboard() const = 0;

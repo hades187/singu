@@ -266,8 +266,14 @@ void LLCubeMap::setMatrix(S32 stage)
 		gGL.getTexUnit(stage)->activate();
 	}
 
-	LLMatrix4a trans(gGLModelView);
-	trans.setRow<3>(LLVector4a::getZero());
+	LLVector3 x(gGLModelView.getRow<0>().getF32ptr());
+	LLVector3 y(gGLModelView.getRow<1>().getF32ptr());
+	LLVector3 z(gGLModelView.getRow<2>().getF32ptr());
+
+	LLMatrix3 mat3;
+	mat3.setRows(x,y,z);
+	LLMatrix4a trans;
+	trans.loadu(mat3);
 	trans.transpose();
 
 	gGL.matrixMode(LLRender::MM_TEXTURE);

@@ -145,8 +145,7 @@ LLInventoryPanel::LLInventoryPanel(const std::string& name,
 	mInventory(inventory),
 	mAllowMultiSelect(allow_multi_select),
 	mViewsInitialized(false),
-	mInvFVBridgeBuilder(NULL),
-	mGroupedItemBridge(new LLFolderViewGroupedItemBridge)
+	mInvFVBridgeBuilder(NULL)
 {
 	mInvFVBridgeBuilder = &INVENTORY_BRIDGE_BUILDER;
 
@@ -173,7 +172,7 @@ void LLInventoryPanel::buildFolderView()
 	else
 	{
 		root_id = (preferred_type != LLFolderType::FT_NONE)
-				? gInventory.findCategoryUUIDForType(preferred_type, false)
+				? gInventory.findCategoryUUIDForType(preferred_type, false, false)
 				: gInventory.getCategory(static_cast<LLUUID>(mStartFolder)) ? static_cast<LLUUID>(mStartFolder) // Singu Note: if start folder is an id of a folder, use it
 				: LLUUID::null;
 	}
@@ -696,8 +695,7 @@ LLFolderView * LLInventoryPanel::createFolderView(LLInvFVBridge * bridge, bool u
 	folder_rect, 
 	LLUUID::null, 
 	this, 
-	bridge,
-	mGroupedItemBridge);
+	bridge);
 	ret->setAllowMultiSelect(mAllowMultiSelect);
 	return ret;
 }

@@ -289,7 +289,7 @@ void LLParticipantList::refreshSpeakers()
 				{
 					// Are they in this sim?
 					if (const LLViewerRegion* regionp = *iter)
-						if (std::find(regionp->mMapAvatarIDs.begin(), regionp->mMapAvatarIDs.end(), speakerp->mID) != regionp->mMapAvatarIDs.end())
+						if (regionp->mMapAvatarIDs.find(speakerp->mID) != -1)
 							found = true;
 				}
 				if (!found)

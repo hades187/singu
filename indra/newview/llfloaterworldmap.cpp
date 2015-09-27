@@ -617,10 +617,10 @@ void LLFloaterWorldMap::trackLandmark( const LLUUID& landmark_item_id )
 
 	buildLandmarkIDLists();
 	BOOL found = FALSE;
-	U32 idx;
-	for (idx = 0; idx < mLandmarkItemIDList.size(); idx++)
+	S32 idx;
+	for (idx = 0; idx < mLandmarkItemIDList.count(); idx++)
 	{
-		if ( mLandmarkItemIDList.at(idx) == landmark_item_id)
+		if ( mLandmarkItemIDList.get(idx) == landmark_item_id)
 		{
 			found = TRUE;
 			break;
@@ -629,13 +629,13 @@ void LLFloaterWorldMap::trackLandmark( const LLUUID& landmark_item_id )
 
 	if (found && iface->setCurrentByID( landmark_item_id ) ) 
 	{
-		LLUUID asset_id = mLandmarkAssetIDList.at( idx );
+		LLUUID asset_id = mLandmarkAssetIDList.get( idx );
 		std::string name;
 		LLComboBox* combo = getChild<LLComboBox>( "landmark combo");
 		if (combo) name = combo->getSimple();
 		mTrackedStatus = LLTracker::TRACKING_LANDMARK;
-		LLTracker::trackLandmark(mLandmarkAssetIDList.at( idx ),	// assetID
-								mLandmarkItemIDList.at( idx ), // itemID
+		LLTracker::trackLandmark(mLandmarkAssetIDList.get( idx ),	// assetID
+								mLandmarkItemIDList.get( idx ), // itemID
 								name);			// name
 
 		if( asset_id != sHomeID )
@@ -1026,15 +1026,15 @@ void LLFloaterWorldMap::buildLandmarkIDLists()
 		list->operateOnSelection(LLCtrlListInterface::OP_DELETE);
 	}
 
-	mLandmarkItemIDList.clear();
-	mLandmarkAssetIDList.clear();
+	mLandmarkItemIDList.reset();
+	mLandmarkAssetIDList.reset();
 
 	// Get all of the current landmarks
-	mLandmarkAssetIDList.push_back(LLUUID::null);
-	mLandmarkItemIDList.push_back(LLUUID::null);
+	mLandmarkAssetIDList.put( LLUUID::null );
+	mLandmarkItemIDList.put( LLUUID::null );
 
-	mLandmarkAssetIDList.push_back(sHomeID);
-	mLandmarkItemIDList.push_back(sHomeID);
+	mLandmarkAssetIDList.put( sHomeID );
+	mLandmarkItemIDList.put( sHomeID );
 
 	LLInventoryModel::cat_array_t cats;
 	LLInventoryModel::item_array_t items;
@@ -1047,15 +1047,15 @@ void LLFloaterWorldMap::buildLandmarkIDLists()
 
 	std::sort(items.begin(), items.end(), LLViewerInventoryItem::comparePointers());
 	
-	S32 count = items.size();
+	S32 count = items.count();
 	for(S32 i = 0; i < count; ++i)
 	{
-		LLInventoryItem* item = items.at(i);
+		LLInventoryItem* item = items.get(i);
 
 		list->addSimpleElement(item->getName(), ADD_BOTTOM, item->getUUID());
 
-		mLandmarkAssetIDList.push_back(item->getAssetUUID());
-		mLandmarkItemIDList.push_back(item->getUUID());
+		mLandmarkAssetIDList.put( item->getAssetUUID() );
+		mLandmarkItemIDList.put( item->getUUID() );
 	}
 	list->sortByColumn(std::string("landmark name"), TRUE);
 

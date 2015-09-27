@@ -24,6 +24,7 @@
 #include "llviewercontrol.h"
 #include "llviewerwindow.h"
 #include "llsdserialize.h"
+#include "lldarray.h"
 #include "llfile.h"
 #include "llchat.h"
 #include "llfloaterchat.h"

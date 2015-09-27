@@ -58,10 +58,7 @@ public:
 		GESTURE 		= 64,
 		REBUILD 		= 128, 	// Item UI changed (e.g. item type different)
 		SORT 			= 256, 	// Folder needs to be resorted.
-		CREATE			= 512,  // With ADD, item has just been created.
-		// unfortunately a particular message is still associated with some unique semantics.
-		UPDATE_CREATE	= 1024,  // With ADD, item added via UpdateCreateInventoryItem
-		DESCRIPTION		= 2048,	// Singu extension to keep track of description changes.
+		DESCRIPTION		= 0x10000,	// Singu extension to keep track of description changes.
 		ALL 			= 0xffffffff
 	};
 	LLInventoryObserver();
@@ -156,6 +153,25 @@ protected:
 };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Class LLInventoryExistenceObserver
+//
+//   Used as a base class for doing something when all the
+//   observed item ids exist in the inventory somewhere.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class LLInventoryExistenceObserver : public LLInventoryObserver
+{
+public:
+	LLInventoryExistenceObserver() {}
+	/*virtual*/ void changed(U32 mask);
+
+	void watchItem(const LLUUID& id);
+protected:
+	virtual void done() = 0;
+	uuid_vec_t mExist;
+	uuid_vec_t mMIA;
+};
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Class LLInventoryMovedObserver
 //
 // This class is used as a base class for doing something when all the
@@ -194,11 +210,13 @@ private:
 class LLInventoryAddedObserver : public LLInventoryObserver
 {
 public:
-	LLInventoryAddedObserver() {}
+	LLInventoryAddedObserver() : mAdded() {}
 	/*virtual*/ void changed(U32 mask);
 
 protected:
 	virtual void done() = 0;
+
+	uuid_vec_t mAdded;
 };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -221,6 +239,25 @@ protected:
 	virtual void done() = 0;
 	
 	cat_vec_t	mAddedCategories;
+};
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Class LLInventoryTransactionObserver
+//
+//   Base class for doing something when an inventory transaction completes.
+//   NOTE: This class is not quite complete. Avoid using unless you fix up its
+//   functionality gaps.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class LLInventoryTransactionObserver : public LLInventoryObserver
+{
+public:
+	LLInventoryTransactionObserver(const LLTransactionID& transaction_id);
+	/*virtual*/ void changed(U32 mask);
+
+protected:
+	virtual void done(const uuid_vec_t& folders, const uuid_vec_t& items) = 0;
+
+	LLTransactionID mTransactionID;
 };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -289,23 +326,4 @@ protected:
 
 	category_map_t				mCategoryMap;
 };
-
-class LLFolderView;
-
-// Force a FolderView to scroll after an item in the corresponding view has been renamed.
-class LLScrollOnRenameObserver: public LLInventoryObserver
-{
-public:
-	LLFolderView *mView;
-	LLUUID mUUID;
-	
-	LLScrollOnRenameObserver(const LLUUID& uuid, LLFolderView *view):
-		mUUID(uuid),
-		mView(view)
-	{
-	}
-	/* virtual */ void changed(U32 mask);
-};
-
-
 #endif // LL_LLINVENTORYOBSERVERS_H

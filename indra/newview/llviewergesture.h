@@ -35,6 +35,7 @@
 
 #include "lluuid.h"
 #include "llstring.h"
+#include "lldarray.h"
 #include "llgesture.h"
 
 class LLMessageSystem;

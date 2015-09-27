@@ -470,17 +470,6 @@ void LLFloaterCustomize::onBtnExport()
 	// Determine if the currently selected wearable is modifiable.
 	LLWearableType::EType edit_type = getCurrentWearableType();
 	bool is_modifiable = true;
-	LLViewerWearable* old_wearable = gAgentWearables.getViewerWearable(edit_type, edit_index);
-	if (old_wearable)
-	{
-		LLViewerInventoryItem* item = gInventory.getItem(old_wearable->getItemID());
-//		if (item)
-		{
-//			LLPermissions const& perm = item->getPermissions();
-			// Modifiable means the user can see the sliders and type them over into a file anyway.
-//			is_modifiable = perm.allowModifyBy(gAgent.getID(), gAgent.getGroupID());
-		}
-	}
 
 	if (!is_modifiable)
 	{
@@ -741,7 +730,7 @@ void LLFloaterCustomize::saveCurrentWearables()
 					LLAppearanceMgr::instance().findCOFItemLinks(wearable->getItemID());
 				if (links.size()>0)
 				{
-					link_item = links.at(0).get();
+					link_item = links.get(0).get();
 					if (link_item && link_item->getIsLinkType())
 					{
 						description = link_item->getActualDescription();
@@ -753,11 +742,15 @@ void LLFloaterCustomize::saveCurrentWearables()
 				if (link_item)
 				{
 					// Create new link
-					link_inventory_object(
+					link_inventory_item( gAgent.getID(),
+										 link_item->getLinkedUUID(),
 										 LLAppearanceMgr::instance().getCOF(),
-										 link_item, NULL);
+										 link_item->getName(),
+										 description,
+										 LLAssetType::AT_LINK,
+										 NULL);
 					// Remove old link
-					remove_inventory_object(link_item->getUUID(), NULL);
+					gInventory.purgeObject(link_item->getUUID());
 				}
 			}
 			gAgentWearables.saveWearable( cur, i );

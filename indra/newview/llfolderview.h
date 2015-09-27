@@ -45,6 +45,7 @@
 
 #include "lluictrl.h"
 #include "v4color.h"
+#include "lldarray.h"
 #include "stdenums.h"
 #include "lldepthstack.h"
 #include "lleditmenuhandler.h"
@@ -53,7 +54,6 @@
 #include "llviewertexture.h"
 
 class LLFolderViewEventListener;
-class LLFolderViewGroupedItemModel;
 class LLFolderViewFolder;
 class LLFolderViewItem;
 class LLInventoryModel;
@@ -78,18 +78,12 @@ public:
 
 
 	LLFolderView( const std::string& name, const LLRect& rect, 
-					const LLUUID& source_id, LLPanel *parent_view, LLFolderViewEventListener* listener, LLFolderViewGroupedItemModel* group_model = NULL );
-
-	typedef folder_view_item_deque selected_items_t;
-
+					const LLUUID& source_id, LLPanel *parent_view, LLFolderViewEventListener* listener );
 	virtual ~LLFolderView( void );
 
 	virtual BOOL canFocusChildren() const;
 
 	virtual LLFolderView*	getRoot() { return this; }
-
-	LLFolderViewGroupedItemModel* getFolderViewGroupedItemModel() { return mGroupedItemModel; }
-	const LLFolderViewGroupedItemModel* getFolderViewGroupedItemModel() const { return mGroupedItemModel; }
 
 	// FolderViews default to sort by name.  This will change that,
 	// and resort the items if necessary.
@@ -282,6 +276,7 @@ protected:
 protected:
 	LLHandle<LLView>					mPopupMenuHandle;
 	
+	typedef std::deque<LLFolderViewItem*> selected_items_t;
 	selected_items_t				mSelectedItems;
 	BOOL							mKeyboardSelection;
 	BOOL							mAllowMultiSelect;
@@ -326,8 +321,6 @@ protected:
 	LLUUID							mSelectThisID; // if non null, select this item
 	
 	LLHandle<LLPanel>				mParentPanel;
-
-	LLFolderViewGroupedItemModel*	mGroupedItemModel;
 
 	/**
 	 * Is used to determine if we need to cut text In LLFolderViewItem to avoid horizontal scroll.

@@ -94,8 +94,6 @@ public:
 
 		FT_BASIC_ROOT = 52,
 
-		FT_SUITCASE = 100,
-
 		FT_COUNT,
 
 		FT_NONE = -1

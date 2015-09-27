@@ -28,6 +28,7 @@
 #define LL_LLVIEWERPARCELMGR_H
 
 #include "v3dmath.h"
+#include "lldarray.h"
 #include "llframetimer.h"
 #include "llsingleton.h"
 #include "llparcelselection.h"
@@ -342,7 +343,7 @@ private:
 	LLVector3d					mHoverWestSouth;
 	LLVector3d					mHoverEastNorth;
 
-	std::vector<LLParcelObserver*> mObservers;
+	LLDynamicArray<LLParcelObserver*> mObservers;
 
 	BOOL						mTeleportInProgress;
 	teleport_finished_signal_t	mTeleportFinishedSignal;

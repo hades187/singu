@@ -179,7 +179,6 @@ public:
 	virtual BOOL	isAttachment() const { return FALSE; }
 	virtual LLVOAvatar* getAvatar() const;  //get the avatar this object is attached to, or NULL if object is not an attachment
 	virtual BOOL	isHUDAttachment() const { return FALSE; }
-	virtual BOOL	isTempAttachment() const;
 	virtual void 	updateRadius() {};
 	virtual F32 	getVObjRadius() const; // default implemenation is mDrawable->getRadius()
 	
@@ -825,7 +824,7 @@ public:
 	BOOL getLastUpdateCached() const;
 	void setLastUpdateCached(BOOL last_update_cached);
 private:
-	LLUUID mAttachmentItemID; // ItemID of the associated object is in user inventory.
+	LLUUID mAttachmentItemID; // ItemID when item is in user inventory.
 	EObjectUpdateType	mLastUpdateType;
 	BOOL	mLastUpdateCached;
 };

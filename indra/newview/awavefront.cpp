@@ -232,9 +232,7 @@ namespace
 				if (!selection->getFirstRootObject())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
-					{
 						LLNotificationsUtil::add("ExportFailed");
-					}
 					return true;
 				}
 
@@ -252,9 +250,7 @@ namespace
 				if (wfsaver->obj_v.empty())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
-					{
 						LLNotificationsUtil::add("ExportFailed");
-					}
 					delete wfsaver;
 					return true;
 				}
@@ -322,9 +318,9 @@ void WavefrontSaver::Add(const LLVOAvatar* av_vo) //adds attachments, too!
 			LLViewerObject* o = *itero;
 			if (!o) continue;
 
-			std::vector<LLViewerObject*> prims;
+			LLDynamicArray<LLViewerObject*> prims = LLDynamicArray<LLViewerObject*>();
 			o->addThisAndAllChildren(prims);
-			for (std::vector<LLViewerObject* >::iterator iterc = prims.begin(); iterc != prims.end(); ++iterc)
+			for (LLDynamicArray<LLViewerObject*>::iterator iterc = prims.begin(); iterc != prims.end(); ++iterc)
 			{
 				const LLViewerObject* c = *iterc;
 				if (!c) continue;
@@ -367,9 +363,7 @@ namespace
 				if (wfsaver->obj_v.empty())
 				{
 					if (gSavedSettings.getBOOL("OBJExportNotifyFailed"))
-					{
 						LLNotificationsUtil::add("ExportFailed");
-					}
 					delete wfsaver;
 					return true;
 				}

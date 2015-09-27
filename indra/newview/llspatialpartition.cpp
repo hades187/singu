@@ -63,10 +63,25 @@
 static LLFastTimer::DeclareTimer FTM_FRUSTUM_CULL("Frustum Culling");
 static LLFastTimer::DeclareTimer FTM_CULL_REBOUND("Cull Rebound");
 
+const F32 SG_OCCLUSION_FUDGE = 0.25f;
+#define SG_DISCARD_TOLERANCE 0.01f
+
+#if LL_OCTREE_PARANOIA_CHECK
+#define assert_octree_valid(x) x->validate()
+#define assert_states_valid(x) ((LLSpatialGroup*) x->mSpatialPartition->mOctree->getListener(0))->checkStates()
+#else
+#define assert_octree_valid(x)
+#define assert_states_valid(x)
+#endif
+
 extern bool gShiftFrame;
 
 static U32 sZombieGroups = 0;
 U32 LLSpatialGroup::sNodeCount = 0;
+
+#define LL_TRACK_PENDING_OCCLUSION_QUERIES 0
+
+std::set<GLuint> LLSpatialGroup::sPendingQueries;
 
 U32 gOctreeMaxCapacity;
 U32 gOctreeReserveCapacity;
@@ -75,6 +90,35 @@ BOOL LLSpatialGroup::sNoDelete = FALSE;
 
 static F32 sLastMaxTexPriority = 1.f;
 static F32 sCurMaxTexPriority = 1.f;
+
+class LLOcclusionQueryPool : public LLGLNamePool
+{
+public:
+	LLOcclusionQueryPool()
+	{
+	}
+
+protected:
+
+	virtual GLuint allocateName()
+	{
+		GLuint ret = 0;
+
+		glGenQueriesARB(1, &ret);
+
+		return ret;
+	}
+
+	virtual void releaseName(GLuint name)
+	{
+#if LL_TRACK_PENDING_OCCLUSION_QUERIES
+		LLSpatialGroup::sPendingQueries.erase(name);
+#endif
+		glDeleteQueriesARB(1, &name);
+	}
+};
+
+static LLOcclusionQueryPool sQueryPool;
 
 //BOOL LLSpatialPartition::sFreezeState = FALSE;
 
@@ -89,6 +133,185 @@ void sg_assert(BOOL expr)
 	}
 #endif
 }
+
+S32 AABBSphereIntersect(const LLVector3& min, const LLVector3& max, const LLVector3 &origin, const F32 &rad)
+{
+	return AABBSphereIntersectR2(min, max, origin, rad*rad);
+}
+
+S32 AABBSphereIntersectR2(const LLVector3& min, const LLVector3& max, const LLVector3 &origin, const F32 &r)
+{
+	F32 d = 0.f;
+	F32 t;
+	
+	if ((min-origin).magVecSquared() < r &&
+		(max-origin).magVecSquared() < r)
+	{
+		return 2;
+	}
+
+	for (U32 i = 0; i < 3; i++)
+	{
+		if (origin.mV[i] < min.mV[i])
+		{
+			t = min.mV[i] - origin.mV[i];
+			d += t*t;
+		}
+		else if (origin.mV[i] > max.mV[i])
+		{
+			t = origin.mV[i] - max.mV[i];
+			d += t*t;
+		}
+
+		if (d > r)
+		{
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+S32 AABBSphereIntersect(const LLVector4a& min, const LLVector4a& max, const LLVector3 &origin, const F32 &rad)
+{
+	return AABBSphereIntersectR2(min, max, origin, rad*rad);
+}
+
+S32 AABBSphereIntersectR2(const LLVector4a& min, const LLVector4a& max, const LLVector3 &origin, const F32 &r)
+{
+	F32 d = 0.f;
+	F32 t;
+	
+	LLVector4a origina;
+	origina.load3(origin.mV);
+
+	LLVector4a v;
+	v.setSub(min, origina);
+	
+	if (v.dot3(v) < r)
+	{
+		v.setSub(max, origina);
+		if (v.dot3(v) < r)
+		{
+			return 2;
+		}
+	}
+
+
+	for (U32 i = 0; i < 3; i++)
+	{
+		if (origin.mV[i] < min[i])
+		{
+			t = min[i] - origin.mV[i];
+			d += t*t;
+		}
+		else if (origin.mV[i] > max[i])
+		{
+			t = origin.mV[i] - max[i];
+			d += t*t;
+		}
+
+		if (d > r)
+		{
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+typedef enum
+{
+	b000 = 0x00,
+	b001 = 0x01,
+	b010 = 0x02,
+	b011 = 0x03,
+	b100 = 0x04,
+	b101 = 0x05,
+	b110 = 0x06,
+	b111 = 0x07,
+} eLoveTheBits;
+
+//contact Runitai Linden for a copy of the SL object used to write this table
+//basically, you give the table a bitmask of the look-at vector to a node and it
+//gives you a triangle fan index array
+static U16 sOcclusionIndices[] =
+{
+	 //000
+		b111, b110, b010, b011, b001, b101, b100, b110,
+	 //001 
+		b011, b010, b000, b001, b101, b111, b110, b010,
+	 //010
+		b101, b100, b110, b111, b011, b001, b000, b100,
+	 //011 
+		b001, b000, b100, b101, b111, b011, b010, b000,
+	 //100 
+		b110, b000, b010, b011, b111, b101, b100, b000,
+	 //101 
+		b010, b100, b000, b001, b011, b111, b110, b100,
+	 //110
+		b100, b010, b110, b111, b101, b001, b000, b010,
+	 //111
+		b000, b110, b100, b101, b001, b011, b010, b110,
+};
+
+U32 get_box_fan_indices(LLCamera* camera, const LLVector4a& center)
+{
+	LLVector4a origin;
+	origin.load3(camera->getOrigin().mV);
+
+	S32 cypher = center.greaterThan(origin).getGatheredBits() & 0x7;
+	
+	return cypher*8;
+}
+
+U8* get_box_fan_indices_ptr(LLCamera* camera, const LLVector4a& center)
+{
+	LLVector4a origin;
+	origin.load3(camera->getOrigin().mV);
+
+	S32 cypher = center.greaterThan(origin).getGatheredBits() & 0x7;
+	
+	return (U8*) (sOcclusionIndices+cypher*8);
+}
+
+//create a vertex buffer for efficiently rendering cubes
+LLVertexBuffer* ll_create_cube_vb(U32 type_mask, U32 usage)
+{
+	LLVertexBuffer* ret = new LLVertexBuffer(type_mask, usage);
+
+	ret->allocateBuffer(8, 64, true);
+
+	LLStrider<LLVector3> pos;
+	LLStrider<U16> idx;
+
+	ret->getVertexStrider(pos);
+	ret->getIndexStrider(idx);
+
+	pos[0] = LLVector3(-1,-1,-1);
+	pos[1] = LLVector3(-1,-1, 1);
+	pos[2] = LLVector3(-1, 1,-1);
+	pos[3] = LLVector3(-1, 1, 1);
+	pos[4] = LLVector3( 1,-1,-1);
+	pos[5] = LLVector3( 1,-1, 1);
+	pos[6] = LLVector3( 1, 1,-1);
+	pos[7] = LLVector3( 1, 1, 1);
+
+	for (U32 i = 0; i < 64; i++)
+	{
+		idx[i] = sOcclusionIndices[i];
+	}
+
+	ret->flush();
+
+	return ret;
+}
+
+static LLFastTimer::DeclareTimer FTM_BUILD_OCCLUSION("Build Occlusion");
+
+BOOL earlyFail(LLCamera* camera, LLSpatialGroup* group);
 
 //returns:
 //	0 if sphere and AABB are not intersecting 
@@ -130,12 +353,23 @@ LLSpatialGroup::~LLSpatialGroup()
 	{
 		gPipeline.checkReferences(this);
 	}
-	if (hasState((LLSpatialGroup::eSpatialState)DEAD))
+	if (isState(DEAD))
 	{
 		sZombieGroups--;
 	}
 	
 	sNodeCount--;
+
+	if (gGLManager.mHasOcclusionQuery)
+	{
+		for (U32 i = 0; i < LLViewerCamera::NUM_CAMERAS; ++i)
+		{
+			if (mOcclusionQuery[i])
+			{
+				sQueryPool.release(mOcclusionQuery[i]);
+			}
+		}
+	}
 
 	clearDrawMap();
 }
@@ -147,7 +381,22 @@ void LLSpatialGroup::clearDrawMap()
 
 BOOL LLSpatialGroup::isHUDGroup() 
 {
-	return getSpatialPartition() && getSpatialPartition()->isHUDPartition() ; 
+	return mSpatialPartition && mSpatialPartition->isHUDPartition() ; 
+}
+
+BOOL LLSpatialGroup::isRecentlyVisible() const
+{
+	return (LLDrawable::getCurrentFrame() - mVisible[LLViewerCamera::sCurCameraID]) < LLDrawable::getMinVisFrameRange() ;
+}
+
+BOOL LLSpatialGroup::isVisible() const
+{
+	return mVisible[LLViewerCamera::sCurCameraID] >= LLDrawable::getCurrentFrame() ? TRUE : FALSE;
+}
+
+void LLSpatialGroup::setVisible()
+{
+	mVisible[LLViewerCamera::sCurCameraID] = LLDrawable::getCurrentFrame();
 }
 
 void LLSpatialGroup::validate()
@@ -171,7 +420,7 @@ void LLSpatialGroup::validate()
 		sg_assert(drawable->getSpatialGroup() == this);
 		if (drawable->getSpatialBridge())
 		{
-			sg_assert(drawable->getSpatialBridge() == getSpatialPartition()->asBridge());
+			sg_assert(drawable->getSpatialBridge() == mSpatialPartition->asBridge());
 		}
 
 		/*if (drawable->isSpatialBridge())
@@ -211,6 +460,14 @@ void LLSpatialGroup::validate()
 #endif
 }
 
+void LLSpatialGroup::checkStates()
+{
+#if LL_OCTREE_PARANOIA_CHECK
+	LLOctreeStateCheck checker;
+	checker.traverse(mOctreeNode);
+#endif
+}
+
 void LLSpatialGroup::validateDrawMap()
 {
 #if LL_OCTREE_PARANOIA_CHECK
@@ -234,12 +491,12 @@ BOOL LLSpatialGroup::updateInGroup(LLDrawable *drawablep, BOOL immediate)
 	OctreeNode* parent = mOctreeNode->getOctParent();
 	
 	if (mOctreeNode->isInside(drawablep->getPositionGroup()) && 
-		(mOctreeNode->contains(drawablep->getEntry()) ||
+		(mOctreeNode->contains(drawablep) ||
 		 (drawablep->getBinRadius() > mOctreeNode->getSize()[0] &&
 				parent && parent->getElementCount() >= gOctreeMaxCapacity)))
 	{
 		unbound();
-		setState((LLSpatialGroup::eSpatialState)OBJECT_DIRTY);
+		setState(OBJECT_DIRTY);
 		//setState(GEOM_DIRTY);
 		return TRUE;
 	}
@@ -248,15 +505,16 @@ BOOL LLSpatialGroup::updateInGroup(LLDrawable *drawablep, BOOL immediate)
 }
 
 
-BOOL LLSpatialGroup::addObject(LLDrawable *drawablep)
+BOOL LLSpatialGroup::addObject(LLDrawable *drawablep, BOOL add_all, BOOL from_octree)
 {
-	if(!drawablep)
+	if (!from_octree)
 	{
-		return FALSE;
+		mOctreeNode->insert(drawablep);
 	}
+	else
 	{
-		drawablep->setGroup(this);
-		setState(LLSpatialGroup::eSpatialState(OBJECT_DIRTY | GEOM_DIRTY));
+		drawablep->setSpatialGroup(this);
+		setState(OBJECT_DIRTY | GEOM_DIRTY);
 		setOcclusionState(LLSpatialGroup::DISCARD_QUERY, LLSpatialGroup::STATE_MODE_ALL_CAMERAS);
 		gPipeline.markRebuild(this, TRUE);
 		if (drawablep->isSpatialBridge())
@@ -276,9 +534,9 @@ void LLSpatialGroup::rebuildGeom()
 {
 	if (!isDead())
 	{
-		getSpatialPartition()->rebuildGeom(this);
+		mSpatialPartition->rebuildGeom(this);
 
-		if (hasState(LLSpatialGroup::MESH_DIRTY))
+		if (isState(LLSpatialGroup::MESH_DIRTY))
 		{
 			gPipeline.markMeshDirty(this);
 		}
@@ -289,7 +547,7 @@ void LLSpatialGroup::rebuildMesh()
 {
 	if (!isDead())
 	{
-		getSpatialPartition()->rebuildMesh(this);
+		mSpatialPartition->rebuildMesh(this);
 	}
 }
 
@@ -300,7 +558,7 @@ static LLFastTimer::DeclareTimer FTM_GET_GEOMETRY("Get Geometry");
 
 void LLSpatialPartition::rebuildGeom(LLSpatialGroup* group)
 {
-	if (group->isDead() || !group->hasState(LLSpatialGroup::GEOM_DIRTY))
+	if (group->isDead() || !group->isState(LLSpatialGroup::GEOM_DIRTY))
 	{
 		return;
 	}
@@ -359,32 +617,142 @@ void LLSpatialPartition::rebuildGeom(LLSpatialGroup* group)
 	group->clearState(LLSpatialGroup::GEOM_DIRTY);
 }
 
-
 void LLSpatialPartition::rebuildMesh(LLSpatialGroup* group)
 {
 
 }
 
-LLSpatialGroup* LLSpatialGroup::getParent()
-{
-	return (LLSpatialGroup*)LLViewerOctreeGroup::getParent();
-}
+BOOL LLSpatialGroup::boundObjects(BOOL empty, LLVector4a& minOut, LLVector4a& maxOut)
+{	
+	const OctreeNode* node = mOctreeNode;
 
-BOOL LLSpatialGroup::removeObject(LLDrawable *drawablep, BOOL from_octree)
-	{
-	if(!drawablep)
-	{
+	if (node->isEmpty())
+	{	//don't do anything if there are no objects
+		if (empty && mOctreeNode->getParent())
+		{	//only root is allowed to be empty
+			OCT_ERRS << "Empty leaf found in octree." << LL_ENDL;
+		}
 		return FALSE;
 	}
 
-	unbound();
-	if (mOctreeNode && !from_octree)
+	LLVector4a& newMin = mObjectExtents[0];
+	LLVector4a& newMax = mObjectExtents[1];
+	
+	if (isState(OBJECT_DIRTY))
+	{ //calculate new bounding box
+		clearState(OBJECT_DIRTY);
+
+		//initialize bounding box to first element
+		OctreeNode::const_element_iter i = node->getDataBegin();
+		LLDrawable* drawablep = *i;
+		const LLVector4a* minMax = drawablep->getSpatialExtents();
+
+		newMin = minMax[0];
+		newMax = minMax[1];
+
+		for (++i; i != node->getDataEnd(); ++i)
+		{
+			drawablep = *i;
+			minMax = drawablep->getSpatialExtents();
+			
+			update_min_max(newMin, newMax, minMax[0]);
+			update_min_max(newMin, newMax, minMax[1]);
+
+			//bin up the object
+			/*for (U32 i = 0; i < 3; i++)
+			{
+				if (minMax[0].mV[i] < newMin.mV[i])
+				{
+					newMin.mV[i] = minMax[0].mV[i];
+				}
+				if (minMax[1].mV[i] > newMax.mV[i])
+				{
+					newMax.mV[i] = minMax[1].mV[i];
+				}
+			}*/
+		}
+		
+		mObjectBounds[0].setAdd(newMin, newMax);
+		mObjectBounds[0].mul(0.5f);
+		mObjectBounds[1].setSub(newMax, newMin);
+		mObjectBounds[1].mul(0.5f);
+	}
+	
+	if (empty)
 	{
-		drawablep->setGroup(NULL);
+		minOut = newMin;
+		maxOut = newMax;
 	}
 	else
 	{
-		drawablep->setGroup(NULL);
+		minOut.setMin(minOut, newMin);
+		maxOut.setMax(maxOut, newMax);
+	}
+		
+	return TRUE;
+}
+
+void LLSpatialGroup::unbound()
+{
+	if (isState(DIRTY))
+	{
+		return;
+	}
+
+	setState(DIRTY);
+	
+	//all the parent nodes need to rebound this child
+	if (mOctreeNode)
+	{
+		OctreeNode* parent = (OctreeNode*) mOctreeNode->getParent();
+		while (parent != NULL)
+		{
+			LLSpatialGroup* group = (LLSpatialGroup*) parent->getListener(0);
+			if (group->isState(DIRTY))
+			{
+				return;
+			}
+			
+			group->setState(DIRTY);
+			parent = (OctreeNode*) parent->getParent();
+		}
+	}
+}
+
+LLSpatialGroup* LLSpatialGroup::getParent()
+{
+	if (isDead())
+	{
+		return NULL;
+	}
+
+	if(!mOctreeNode)
+	{
+		return NULL;
+	}
+	OctreeNode* parent = mOctreeNode->getOctParent();
+
+	if (parent)
+	{
+		return (LLSpatialGroup*) parent->getListener(0);
+	}
+
+	return NULL;
+}
+
+BOOL LLSpatialGroup::removeObject(LLDrawable *drawablep, BOOL from_octree)
+{
+	unbound();
+	if (mOctreeNode && !from_octree)
+	{
+		if (!mOctreeNode->remove(drawablep))
+		{
+			OCT_ERRS << "Could not remove drawable from spatial group" << LL_ENDL;
+		}
+	}
+	else
+	{
+		drawablep->setSpatialGroup(NULL);
 		setState(GEOM_DIRTY);
 		gPipeline.markRebuild(this, TRUE);
 
@@ -421,23 +789,23 @@ void LLSpatialGroup::shift(const LLVector4a &offset)
 	mObjectExtents[0].add(offset);
 	mObjectExtents[1].add(offset);
 
-	if (!getSpatialPartition()->mRenderByGroup && 
-		getSpatialPartition()->mPartitionType != LLViewerRegion::PARTITION_TREE &&
-		getSpatialPartition()->mPartitionType != LLViewerRegion::PARTITION_TERRAIN &&
-		getSpatialPartition()->mPartitionType != LLViewerRegion::PARTITION_ATTACHMENT &&
-		getSpatialPartition()->mPartitionType != LLViewerRegion::PARTITION_BRIDGE)
+	if (!mSpatialPartition->mRenderByGroup && 
+		mSpatialPartition->mPartitionType != LLViewerRegion::PARTITION_TREE &&
+		mSpatialPartition->mPartitionType != LLViewerRegion::PARTITION_TERRAIN &&
+		mSpatialPartition->mPartitionType != LLViewerRegion::PARTITION_ATTACHMENT &&
+		mSpatialPartition->mPartitionType != LLViewerRegion::PARTITION_BRIDGE)
 	{
 		setState(GEOM_DIRTY);
 		gPipeline.markRebuild(this, TRUE);
 	}
 }
 
-class LLSpatialSetState : public OctreeTraveler
+class LLSpatialSetState : public LLSpatialGroup::OctreeTraveler
 {
 public:
 	LLSpatialGroup::eSpatialState mState;
 	LLSpatialSetState(LLSpatialGroup::eSpatialState state) : mState(state) { }
-	virtual void visit(const OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->setState(mState); }	
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->setState(mState); }	
 };
 
 class LLSpatialSetStateDiff : public LLSpatialSetState
@@ -445,16 +813,25 @@ class LLSpatialSetStateDiff : public LLSpatialSetState
 public:
 	LLSpatialSetStateDiff(LLSpatialGroup::eSpatialState state) : LLSpatialSetState(state) { }
 
-	virtual void traverse(const OctreeNode* n)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
 		
-		if (!group->hasState(mState))
+		if (!group->isState(mState))
 		{
-			OctreeTraveler::traverse(n);
+			LLSpatialGroup::OctreeTraveler::traverse(n);
 		}
 	}
 };
+
+void LLSpatialGroup::setState(eSpatialState state) 
+{ 
+//	if (LLSpatialPartition::sFreezeState)
+//		return;
+	mState |= state; 
+	
+	llassert(state <= LLSpatialGroup::STATE_MASK);
+}	
 
 void LLSpatialGroup::setState(eSpatialState state, S32 mode) 
 {
@@ -479,12 +856,12 @@ void LLSpatialGroup::setState(eSpatialState state, S32 mode)
 	}
 }
 
-class LLSpatialClearState : public OctreeTraveler
+class LLSpatialClearState : public LLSpatialGroup::OctreeTraveler
 {
 public:
 	LLSpatialGroup::eSpatialState mState;
 	LLSpatialClearState(LLSpatialGroup::eSpatialState state) : mState(state) { }
-	virtual void visit(const OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->clearState(mState); }
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->clearState(mState); }
 };
 
 class LLSpatialClearStateDiff : public LLSpatialClearState
@@ -492,16 +869,23 @@ class LLSpatialClearStateDiff : public LLSpatialClearState
 public:
 	LLSpatialClearStateDiff(LLSpatialGroup::eSpatialState state) : LLSpatialClearState(state) { }
 
-	virtual void traverse(const OctreeNode* n)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
 		
-		if (group->hasState(mState))
+		if (group->isState(mState))
 		{
-			OctreeTraveler::traverse(n);
+			LLSpatialGroup::OctreeTraveler::traverse(n);
 		}
 	}
 };
+
+void LLSpatialGroup::clearState(eSpatialState state)
+{
+	llassert(state <= LLSpatialGroup::STATE_MASK);
+
+	mState &= ~state; 
+}
 
 void LLSpatialGroup::clearState(eSpatialState state, S32 mode)
 {
@@ -526,15 +910,144 @@ void LLSpatialGroup::clearState(eSpatialState state, S32 mode)
 	}
 }
 
+BOOL LLSpatialGroup::isState(eSpatialState state) const
+{ 
+	llassert(state <= LLSpatialGroup::STATE_MASK);
+
+	return mState & state ? TRUE : FALSE; 
+}
+
+//=====================================
+//		Occlusion State Set/Clear
+//=====================================
+class LLSpatialSetOcclusionState : public LLSpatialGroup::OctreeTraveler
+{
+public:
+	LLSpatialGroup::eOcclusionState mState;
+	LLSpatialSetOcclusionState(LLSpatialGroup::eOcclusionState state) : mState(state) { }
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->setOcclusionState(mState); }	
+};
+
+class LLSpatialSetOcclusionStateDiff : public LLSpatialSetOcclusionState
+{
+public:
+	LLSpatialSetOcclusionStateDiff(LLSpatialGroup::eOcclusionState state) : LLSpatialSetOcclusionState(state) { }
+
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
+	{
+		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
+		
+		if (!group->isOcclusionState(mState))
+		{
+			LLSpatialGroup::OctreeTraveler::traverse(n);
+		}
+	}
+};
+
+
+void LLSpatialGroup::setOcclusionState(eOcclusionState state, S32 mode) 
+{
+	if (mode > STATE_MODE_SINGLE)
+	{
+		if (mode == STATE_MODE_DIFF)
+		{
+			LLSpatialSetOcclusionStateDiff setter(state);
+			setter.traverse(mOctreeNode);
+		}
+		else if (mode == STATE_MODE_BRANCH)
+		{
+			LLSpatialSetOcclusionState setter(state);
+			setter.traverse(mOctreeNode);
+		}
+		else
+		{
+			for (U32 i = 0; i < LLViewerCamera::NUM_CAMERAS; i++)
+			{
+				mOcclusionState[i] |= state;
+
+				if ((state & DISCARD_QUERY) && mOcclusionQuery[i])
+				{
+					sQueryPool.release(mOcclusionQuery[i]);
+					mOcclusionQuery[i] = 0;
+				}
+			}
+		}
+	}
+	else
+	{
+		mOcclusionState[LLViewerCamera::sCurCameraID] |= state;
+		if ((state & DISCARD_QUERY) && mOcclusionQuery[LLViewerCamera::sCurCameraID])
+		{
+			sQueryPool.release(mOcclusionQuery[LLViewerCamera::sCurCameraID]);
+			mOcclusionQuery[LLViewerCamera::sCurCameraID] = 0;
+		}
+	}
+}
+
+class LLSpatialClearOcclusionState : public LLSpatialGroup::OctreeTraveler
+{
+public:
+	LLSpatialGroup::eOcclusionState mState;
+	
+	LLSpatialClearOcclusionState(LLSpatialGroup::eOcclusionState state) : mState(state) { }
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) { ((LLSpatialGroup*) branch->getListener(0))->clearOcclusionState(mState); }
+};
+
+class LLSpatialClearOcclusionStateDiff : public LLSpatialClearOcclusionState
+{
+public:
+	LLSpatialClearOcclusionStateDiff(LLSpatialGroup::eOcclusionState state) : LLSpatialClearOcclusionState(state) { }
+
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
+	{
+		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
+		
+		if (group->isOcclusionState(mState))
+		{
+			LLSpatialGroup::OctreeTraveler::traverse(n);
+		}
+	}
+};
+
+void LLSpatialGroup::clearOcclusionState(eOcclusionState state, S32 mode)
+{
+	if (mode > STATE_MODE_SINGLE)
+	{
+		if (mode == STATE_MODE_DIFF)
+		{
+			LLSpatialClearOcclusionStateDiff clearer(state);
+			clearer.traverse(mOctreeNode);
+		}
+		else if (mode == STATE_MODE_BRANCH)
+		{
+			LLSpatialClearOcclusionState clearer(state);
+			clearer.traverse(mOctreeNode);
+		}
+		else
+		{
+			for (U32 i = 0; i < LLViewerCamera::NUM_CAMERAS; i++)
+			{
+				mOcclusionState[i] &= ~state;
+			}
+		}
+	}
+	else
+	{
+		mOcclusionState[LLViewerCamera::sCurCameraID] &= ~state;
+	}
+}
 //======================================
 //		Octree Listener Implementation
 //======================================
 
-LLSpatialGroup::LLSpatialGroup(OctreeNode* node, LLSpatialPartition* part) : LLOcclusionCullingGroup(node, part),
+LLSpatialGroup::LLSpatialGroup(OctreeNode* node, LLSpatialPartition* part) :
 	mObjectBoxSize(1.f),
+	mState(0),
 	mGeometryBytes(0),
 	mSurfaceArea(0.f),
 	mBuilt(0.f),
+	mOctreeNode(node),
+	mSpatialPartition(part),
 	mVertexBuffer(NULL), 
 	mBufferUsage(part->mBufferUsage),
 	mDistance(0.f),
@@ -548,10 +1061,31 @@ LLSpatialGroup::LLSpatialGroup(OctreeNode* node, LLSpatialPartition* part) : LLO
 
 	mViewAngle.splat(0.f);
 	mLastUpdateViewAngle.splat(-1.f);
+	mExtents[0] = mExtents[1] = mObjectBounds[0] = mObjectBounds[1] = 
+		mObjectExtents[0] = mObjectExtents[1] = mViewAngle;
 
 	sg_assert(mOctreeNode->getListenerCount() == 0);
-	setState(LLSpatialGroup::eSpatialState(SG_INITIAL_STATE_MASK));
+	mOctreeNode->addListener(this);
+	setState(SG_INITIAL_STATE_MASK);
 	gPipeline.markRebuild(this, TRUE);
+
+	mBounds[0] = node->getCenter();
+	mBounds[1] = node->getSize();
+
+	part->mLODSeed = (part->mLODSeed+1)%part->mLODPeriod;
+	mLODHash = part->mLODSeed;
+
+	OctreeNode* oct_parent = node->getOctParent();
+
+	LLSpatialGroup* parent = oct_parent ? (LLSpatialGroup*) oct_parent->getListener(0) : NULL;
+
+	for (U32 i = 0; i < LLViewerCamera::NUM_CAMERAS; i++)
+	{
+		mOcclusionQuery[i] = 0;
+		mOcclusionIssued[i] = 0;
+		mOcclusionState[i] = parent ? SG_STATE_INHERIT_MASK & parent->mOcclusionState[i] : 0;
+		mVisible[i] = 0;
+	}
 
 	mRadius = 1;
 	mPixelArea = 1024.f;
@@ -571,17 +1105,17 @@ void LLSpatialGroup::updateDistance(LLCamera &camera)
 	}
 
 #if !LL_RELEASE_FOR_DOWNLOAD
-	if (hasState(LLSpatialGroup::eSpatialState(OBJECT_DIRTY)))
+	if (isState(LLSpatialGroup::OBJECT_DIRTY))
 	{
 		LL_ERRS() << "Spatial group dirty on distance update." << LL_ENDL;
 	}
 #endif
-	if (!isEmpty())
+	if (!isEmpty() /*&& !LLSpatialPartition::sFreezeState*/)
 	{
-		mRadius = getSpatialPartition()->mRenderByGroup ? mObjectBounds[1].getLength3().getF32() :
+		mRadius = mSpatialPartition->mRenderByGroup ? mObjectBounds[1].getLength3().getF32() :
 						(F32) mOctreeNode->getSize().getLength3().getF32();
-		mDistance = getSpatialPartition()->calcDistance(this, camera);
-		mPixelArea = getSpatialPartition()->calcPixelArea(this, camera);
+		mDistance = mSpatialPartition->calcDistance(this, camera);
+		mPixelArea = mSpatialPartition->calcPixelArea(this, camera);
 	}
 }
 
@@ -602,9 +1136,9 @@ F32 LLSpatialPartition::calcDistance(LLSpatialGroup* group, LLCamera& camera)
 		dist = eye.getLength3().getF32();
 		eye.normalize3fast();
 
-		if (!group->hasState(LLSpatialGroup::ALPHA_DIRTY))
+		if (!group->isState(LLSpatialGroup::ALPHA_DIRTY))
 		{
-			if (!group->getSpatialPartition()->isBridge())
+			if (!group->mSpatialPartition->isBridge())
 			{
 				LLVector4a view_angle = eye;
 
@@ -673,18 +1207,23 @@ F32 LLSpatialGroup::getUpdateUrgency() const
 	}
 }
 
+BOOL LLSpatialGroup::needsUpdate()
+{
+	return (LLDrawable::getCurrentFrame()%mSpatialPartition->mLODPeriod == mLODHash) ? TRUE : FALSE;
+}
+
 BOOL LLSpatialGroup::changeLOD()
 {
-	if (hasState(LLSpatialGroup::eSpatialState(ALPHA_DIRTY | OBJECT_DIRTY)))
+	if (isState(ALPHA_DIRTY | OBJECT_DIRTY))
 	{ ///a rebuild is going to happen, update distance and LoD
 		return TRUE;
 	}
 
-	if (getSpatialPartition()->mSlopRatio > 0.f)
+	if (mSpatialPartition->mSlopRatio > 0.f)
 	{
 		F32 ratio = (mDistance - mLastUpdateDistance)/(llmax(mLastUpdateDistance, mRadius));
 
-		if (fabsf(ratio) >= getSpatialPartition()->mSlopRatio)
+		if (fabsf(ratio) >= mSpatialPartition->mSlopRatio)
 		{
 			return TRUE;
 		}
@@ -703,50 +1242,42 @@ BOOL LLSpatialGroup::changeLOD()
 	return FALSE;
 }
 
-void LLSpatialGroup::handleInsertion(const TreeNode* node, LLViewerOctreeEntry* entry)
+void LLSpatialGroup::handleInsertion(const TreeNode* node, LLDrawable* drawablep)
 {
-	addObject((LLDrawable*)entry->getDrawable());
+	addObject(drawablep, FALSE, TRUE);
 	unbound();
-	setState(LLSpatialGroup::eSpatialState(OBJECT_DIRTY));
+	setState(OBJECT_DIRTY);
 }
 
-void LLSpatialGroup::handleRemoval(const TreeNode* node, LLViewerOctreeEntry* entry)
+void LLSpatialGroup::handleRemoval(const TreeNode* node, LLDrawable* drawable)
 {
-	removeObject((LLDrawable*)entry->getDrawable(), TRUE);
-	LLViewerOctreeGroup::handleRemoval(node, entry);
+	removeObject(drawable, TRUE);
+	setState(OBJECT_DIRTY);
 }
 
 void LLSpatialGroup::handleDestruction(const TreeNode* node)
 {
-	if(isDead())
-	{
-		return;
-	}
-	setState(LLSpatialGroup::eSpatialState(DEAD));
-
+	setState(DEAD);
+	
+	{OctreeGuard guard(mOctreeNode);
 	for (element_iter i = getDataBegin(); i != getDataEnd(); ++i)
 	{
-		LLViewerOctreeEntry* entry = *i;
-
-		if (entry->getGroup() == this)
+		LLDrawable* drawable = *i;
+		if (drawable->getSpatialGroup() == this)
 		{
-			if(entry->hasDrawable())
-			{
-				((LLDrawable*)entry->getDrawable())->setGroup(NULL);
-			}
+			drawable->setSpatialGroup(NULL);
 		}
+	}
 	}
 	
 	//clean up avatar attachment stats
-	LLSpatialBridge* bridge = getSpatialPartition()->asBridge();
+	LLSpatialBridge* bridge = mSpatialPartition->asBridge();
 	if (bridge)
 	{
 		if (bridge->mAvatar.notNull())
 		{
 			bridge->mAvatar->mAttachmentGeometryBytes -= mGeometryBytes;
-			bridge->mAvatar->mAttachmentGeometryBytes = llmax(bridge->mAvatar->mAttachmentGeometryBytes, U32(0));
 			bridge->mAvatar->mAttachmentSurfaceArea -= mSurfaceArea;
-			bridge->mAvatar->mAttachmentSurfaceArea = llmax(bridge->mAvatar->mAttachmentSurfaceArea, F32(0.f));
 		}
 	}
 
@@ -757,11 +1288,21 @@ void LLSpatialGroup::handleDestruction(const TreeNode* node)
 	mOctreeNode = NULL;
 }
 
+void LLSpatialGroup::handleStateChange(const TreeNode* node)
+{
+	//drop bounding box upon state change
+	if (mOctreeNode != node)
+	{
+		mOctreeNode = (OctreeNode*) node;
+	}
+	unbound();
+}
+
 void LLSpatialGroup::handleChildAddition(const OctreeNode* parent, OctreeNode* child) 
 {
 	if (child->getListenerCount() == 0)
 	{
-		new LLSpatialGroup(child, getSpatialPartition());
+		new LLSpatialGroup(child, mSpatialPartition);
 	}
 	else
 	{
@@ -771,6 +1312,11 @@ void LLSpatialGroup::handleChildAddition(const OctreeNode* parent, OctreeNode* c
 	unbound();
 
 	assert_states_valid(this);
+}
+
+void LLSpatialGroup::handleChildRemoval(const OctreeNode* parent, const OctreeNode* child)
+{
+	unbound();
 }
 
 void LLSpatialGroup::destroyGL(bool keep_occlusion) 
@@ -790,18 +1336,21 @@ void LLSpatialGroup::destroyGL(bool keep_occlusion)
 
 	if (!keep_occlusion)
 	{
-		releaseOcclusionQueryObjectNames();
+		for (U32 i = 0; i < LLViewerCamera::NUM_CAMERAS; i++)
+		{
+			if (mOcclusionQuery[i])
+			{
+				sQueryPool.release(mOcclusionQuery[i]);
+				mOcclusionQuery[i] = 0;
+			}
+		}
 	}
 
 
 	OctreeGuard guard(mOctreeNode);
 	for (LLSpatialGroup::element_iter i = getDataBegin(); i != getDataEnd(); ++i)
 	{
-		LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-		if(!drawable)
-		{
-			continue;
-		}
+		LLDrawable* drawable = *i;
 		for (S32 j = 0; j < drawable->getNumFaces(); j++)
 		{
 			LLFace* facep = drawable->getFace(j);
@@ -813,30 +1362,320 @@ void LLSpatialGroup::destroyGL(bool keep_occlusion)
 	}
 }
 
+BOOL LLSpatialGroup::rebound()
+{
+	if (!isState(DIRTY))
+	{	//return TRUE if we're not empty
+		return TRUE;
+	}
+	
+	if (mOctreeNode->getChildCount() == 1 && mOctreeNode->getElementCount() == 0)
+	{
+		LLSpatialGroup* group = (LLSpatialGroup*) mOctreeNode->getChild(0)->getListener(0);
+		group->rebound();
+		
+		//copy single child's bounding box
+		mBounds[0] = group->mBounds[0];
+		mBounds[1] = group->mBounds[1];
+		mExtents[0] = group->mExtents[0];
+		mExtents[1] = group->mExtents[1];
+		
+		group->setState(SKIP_FRUSTUM_CHECK);
+	}
+	else if (mOctreeNode->isLeaf())
+	{ //copy object bounding box if this is a leaf
+		boundObjects(TRUE, mExtents[0], mExtents[1]);
+		mBounds[0] = mObjectBounds[0];
+		mBounds[1] = mObjectBounds[1];
+	}
+	else
+	{
+		LLVector4a& newMin = mExtents[0];
+		LLVector4a& newMax = mExtents[1];
+		LLSpatialGroup* group = (LLSpatialGroup*) mOctreeNode->getChild(0)->getListener(0);
+		group->clearState(SKIP_FRUSTUM_CHECK);
+		group->rebound();
+		//initialize to first child
+		newMin = group->mExtents[0];
+		newMax = group->mExtents[1];
+
+		//first, rebound children
+		for (U32 i = 1; i < mOctreeNode->getChildCount(); i++)
+		{
+			group = (LLSpatialGroup*) mOctreeNode->getChild(i)->getListener(0);
+			group->clearState(SKIP_FRUSTUM_CHECK);
+			group->rebound();
+			const LLVector4a& max = group->mExtents[1];
+			const LLVector4a& min = group->mExtents[0];
+
+			newMax.setMax(newMax, max);
+			newMin.setMin(newMin, min);
+		}
+
+		boundObjects(FALSE, newMin, newMax);
+		
+		mBounds[0].setAdd(newMin, newMax);
+		mBounds[0].mul(0.5f);
+		mBounds[1].setSub(newMax, newMin);
+		mBounds[1].mul(0.5f);
+	}
+	
+	clearState(DIRTY);
+
+	return TRUE;
+}
+
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_READBACK("Readback Occlusion");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_WAIT("Occlusion Wait");
+
+void LLSpatialGroup::checkOcclusion()
+{
+	if (LLPipeline::sUseOcclusion > 1)
+	{
+		LLFastTimer t(FTM_OCCLUSION_READBACK);
+		LLSpatialGroup* parent = getParent();
+		if (parent && parent->isOcclusionState(LLSpatialGroup::OCCLUDED))
+		{	//if the parent has been marked as occluded, the child is implicitly occluded
+			clearOcclusionState(QUERY_PENDING | DISCARD_QUERY);
+		}
+		else if (isOcclusionState(QUERY_PENDING))
+		{	//otherwise, if a query is pending, read it back
+
+			GLuint available = 0;
+			if (mOcclusionQuery[LLViewerCamera::sCurCameraID])
+			{
+				glGetQueryObjectuivARB(mOcclusionQuery[LLViewerCamera::sCurCameraID], GL_QUERY_RESULT_AVAILABLE_ARB, &available);
+
+				static LLCachedControl<bool> wait_for_query("RenderSynchronousOcclusion", true);
+
+				if (wait_for_query && mOcclusionIssued[LLViewerCamera::sCurCameraID] < gFrameCount)
+				{ //query was issued last frame, wait until it's available
+					S32 max_loop = 1024;
+					LLFastTimer t(FTM_OCCLUSION_WAIT);
+					while (!available && max_loop-- > 0)
+					{
+						F32 max_time = llmin(gFrameIntervalSeconds*10.f, 1.f);
+						//do some usefu work while we wait
+						LLAppViewer::getTextureCache()->update(max_time); // unpauses the texture cache thread
+						LLAppViewer::getImageDecodeThread()->update(max_time); // unpauses the image thread
+						LLAppViewer::getTextureFetch()->update(max_time); // unpauses the texture fetch thread
+						
+						glGetQueryObjectuivARB(mOcclusionQuery[LLViewerCamera::sCurCameraID], GL_QUERY_RESULT_AVAILABLE_ARB, &available);
+					}
+				}
+			}
+			else
+			{
+				available = 1;
+			}
+
+			if (available)
+			{ //result is available, read it back, otherwise wait until next frame
+				GLuint res = 1;
+				if (!isOcclusionState(DISCARD_QUERY) && mOcclusionQuery[LLViewerCamera::sCurCameraID])
+				{
+					glGetQueryObjectuivARB(mOcclusionQuery[LLViewerCamera::sCurCameraID], GL_QUERY_RESULT_ARB, &res);	
+#if LL_TRACK_PENDING_OCCLUSION_QUERIES
+					sPendingQueries.erase(mOcclusionQuery[LLViewerCamera::sCurCameraID]);
+#endif
+				}
+				else if (mOcclusionQuery[LLViewerCamera::sCurCameraID])
+				{ //delete the query to avoid holding onto hundreds of pending queries
+					sQueryPool.release(mOcclusionQuery[LLViewerCamera::sCurCameraID]);
+					mOcclusionQuery[LLViewerCamera::sCurCameraID] = 0;
+				}
+				
+				if (isOcclusionState(DISCARD_QUERY))
+				{
+					res = 2;
+				}
+
+				if (res > 0)
+				{
+					assert_states_valid(this);
+					clearOcclusionState(LLSpatialGroup::OCCLUDED, LLSpatialGroup::STATE_MODE_DIFF);
+					assert_states_valid(this);
+				}
+				else
+				{
+					assert_states_valid(this);
+					setOcclusionState(LLSpatialGroup::OCCLUDED, LLSpatialGroup::STATE_MODE_DIFF);
+					assert_states_valid(this);
+				}
+
+				clearOcclusionState(QUERY_PENDING | DISCARD_QUERY);
+			}
+		}
+		else if (mSpatialPartition->isOcclusionEnabled() && isOcclusionState(LLSpatialGroup::OCCLUDED))
+		{	//check occlusion has been issued for occluded node that has not had a query issued
+			assert_states_valid(this);
+			clearOcclusionState(LLSpatialGroup::OCCLUDED, LLSpatialGroup::STATE_MODE_DIFF);
+			assert_states_valid(this);
+		}
+	}
+}
+
+static LLFastTimer::DeclareTimer FTM_PUSH_OCCLUSION_VERTS("Push Occlusion");
+static LLFastTimer::DeclareTimer FTM_SET_OCCLUSION_STATE("Occlusion State");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_EARLY_FAIL("Occlusion Early Fail");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_ALLOCATE("Allocate");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_BUILD("Build");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_BEGIN_QUERY("Begin Query");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_END_QUERY("End Query");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_SET_BUFFER("Set Buffer");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_DRAW_WATER("Draw Water");
+static LLFastTimer::DeclareTimer FTM_OCCLUSION_DRAW("Draw");
 
 
 
+void LLSpatialGroup::doOcclusion(LLCamera* camera)
+{
+	LLGLDisable stencil(GL_STENCIL_TEST);
+	if (mSpatialPartition->isOcclusionEnabled() && LLPipeline::sUseOcclusion > 1)
+	{
+		//static const LLCachedControl<BOOL> render_water_void_culling("RenderWaterVoidCulling", TRUE);
+		// Don't cull hole/edge water, unless RenderWaterVoidCulling is set and we have the GL_ARB_depth_clamp extension.
+		//if ((mSpatialPartition->mDrawableType == LLDrawPool::POOL_VOIDWATER && !gGLManager.mHasDepthClamp) ||
+		//	earlyFail(camera, this))
+		if (earlyFail(camera, this))	//Returns true if camera is inside this spatial group.
+		{
+			LLFastTimer t(FTM_OCCLUSION_EARLY_FAIL);
+			setOcclusionState(LLSpatialGroup::DISCARD_QUERY);
+			assert_states_valid(this);
+			clearOcclusionState(LLSpatialGroup::OCCLUDED, LLSpatialGroup::STATE_MODE_DIFF);
+			assert_states_valid(this);
+		}
+		else
+		{
+			if (!isOcclusionState(QUERY_PENDING) || isOcclusionState(DISCARD_QUERY))
+			{
+				{ //no query pending, or previous query to be discarded
+					LLFastTimer t(FTM_RENDER_OCCLUSION);
+
+					if (!mOcclusionQuery[LLViewerCamera::sCurCameraID])
+					{
+						LLFastTimer t(FTM_OCCLUSION_ALLOCATE);
+						mOcclusionQuery[LLViewerCamera::sCurCameraID] = sQueryPool.allocate();
+					}
+
+					// Depth clamp all water to avoid it being culled as a result of being
+					// behind the far clip plane, and in the case of edge water to avoid
+					// it being culled while still visible.
+					bool const use_depth_clamp = gGLManager.mHasDepthClamp &&
+												(mSpatialPartition->mDrawableType == LLDrawPool::POOL_WATER ||
+												mSpatialPartition->mDrawableType == LLDrawPool::POOL_VOIDWATER);
+
+					LLGLEnable clamp(use_depth_clamp ? GL_DEPTH_CLAMP : 0);	
+
+#if !LL_DARWIN					
+					U32 mode = gGLManager.mHasOcclusionQuery2 ? GL_ANY_SAMPLES_PASSED : GL_SAMPLES_PASSED_ARB;
+#else
+					U32 mode = GL_SAMPLES_PASSED_ARB;
+#endif
+					
+#if LL_TRACK_PENDING_OCCLUSION_QUERIES
+					sPendingQueries.insert(mOcclusionQuery[LLViewerCamera::sCurCameraID]);
+#endif
+
+					{
+						LLFastTimer t(FTM_PUSH_OCCLUSION_VERTS);
+						
+						//store which frame this query was issued on
+						mOcclusionIssued[LLViewerCamera::sCurCameraID] = gFrameCount;
+
+						{
+							LLFastTimer t(FTM_OCCLUSION_BEGIN_QUERY);
+							glBeginQueryARB(mode, mOcclusionQuery[LLViewerCamera::sCurCameraID]);					
+						}
+					
+						LLGLSLShader* shader = LLGLSLShader::sCurBoundShaderPtr;
+						llassert(shader);
+
+						shader->uniform3fv(LLShaderMgr::BOX_CENTER, 1, mBounds[0].getF32ptr());
+						//static LLVector4a fudge(SG_OCCLUSION_FUDGE);
+						static LLCachedControl<F32> vel("SHOcclusionFudge",SG_OCCLUSION_FUDGE);
+						LLVector4a fudge(SG_OCCLUSION_FUDGE);
+						static LLVector4a bounds;
+						bounds.setAdd(fudge,mBounds[1]);
+						shader->uniform3fv(LLShaderMgr::BOX_SIZE, 1, bounds.getF32ptr());
+
+						if (!use_depth_clamp && mSpatialPartition->mDrawableType == LLDrawPool::POOL_VOIDWATER)
+						{
+							LLFastTimer t(FTM_OCCLUSION_DRAW_WATER);
+
+							LLGLSquashToFarClip squash(glh_get_current_projection(), 1);
+							if (camera->getOrigin().isExactlyZero())
+							{ //origin is invalid, draw entire box
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, 0);
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, b111*8);				
+							}
+							else
+							{
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, get_box_fan_indices(camera, mBounds[0]));
+							}
+						}
+						else
+						{
+							LLFastTimer t(FTM_OCCLUSION_DRAW);
+							if (camera->getOrigin().isExactlyZero())
+							{ //origin is invalid, draw entire box
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, 0);
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, b111*8);				
+							}
+							else
+							{
+								gPipeline.mCubeVB->drawRange(LLRender::TRIANGLE_FAN, 0, 7, 8, get_box_fan_indices(camera, mBounds[0]));
+							}
+						}
 
 
+						{
+							LLFastTimer t(FTM_OCCLUSION_END_QUERY);
+							glEndQueryARB(mode);
+						}
+					}
+				}
+
+				{
+					LLFastTimer t(FTM_SET_OCCLUSION_STATE);
+					setOcclusionState(LLSpatialGroup::QUERY_PENDING);
+					clearOcclusionState(LLSpatialGroup::DISCARD_QUERY);
+				}
+			}
+		}
+	}
+}
 
 //==============================================
 
 LLSpatialPartition::LLSpatialPartition(U32 data_mask, BOOL render_by_group, U32 buffer_usage)
 : mRenderByGroup(render_by_group), mBridge(NULL)
 {
+	mOcclusionEnabled = TRUE;
+	mDrawableType = 0;
 	mPartitionType = LLViewerRegion::PARTITION_NONE;
+	mLODSeed = 0;
+	mLODPeriod = 1;
 	mVertexDataMask = data_mask;
 	mBufferUsage = buffer_usage;
 	mDepthMask = FALSE;
 	mSlopRatio = 0.25f;
 	mInfiniteFarClip = FALSE;
 
+	LLVector4a center, size;
+	center.splat(0.f);
+	size.splat(1.f);
+
+	mOctree = new LLSpatialGroup::OctreeRoot(center,size,
+											NULL);
 	new LLSpatialGroup(mOctree, this);
 }
 
 
 LLSpatialPartition::~LLSpatialPartition()
 {
+	delete mOctree;
+	mOctree = NULL;
 }
 
 
@@ -847,15 +1686,11 @@ LLSpatialGroup *LLSpatialPartition::put(LLDrawable *drawablep, BOOL was_visible)
 	//keep drawable from being garbage collected
 	LLPointer<LLDrawable> ptr = drawablep;
 		
-	if(!drawablep->getGroup())
-	{
 	assert_octree_valid(mOctree);
-		mOctree->insert(drawablep->getEntry());
+	mOctree->insert(drawablep);
 	assert_octree_valid(mOctree);
-	}	
 	
 	LLSpatialGroup* group = drawablep->getSpatialGroup();
-	llassert(group != NULL);
 
 	if (group && was_visible && group->isOcclusionState(LLSpatialGroup::QUERY_PENDING))
 	{
@@ -873,8 +1708,10 @@ BOOL LLSpatialPartition::remove(LLDrawable *drawablep, LLSpatialGroup *curp)
 	}
 	else
 	{
-		drawablep->setGroup(NULL);
+		drawablep->setSpatialGroup(NULL);
 	}
+
+	drawablep->setSpatialGroup(NULL);
 
 	assert_octree_valid(mOctree);
 	
@@ -893,11 +1730,11 @@ void LLSpatialPartition::move(LLDrawable *drawablep, LLSpatialGroup *curp, BOOL 
 		
 	BOOL was_visible = curp ? curp->isVisible() : FALSE;
 
-	if (curp && curp->getSpatialPartition() != this)
+	if (curp && curp->mSpatialPartition != this)
 	{
 		//keep drawable from being garbage collected
 		LLPointer<LLDrawable> ptr = drawablep;
-		if (curp->getSpatialPartition()->remove(drawablep, curp))
+		if (curp->mSpatialPartition->remove(drawablep, curp))
 		{
 			put(drawablep, was_visible);
 			return;
@@ -925,13 +1762,13 @@ void LLSpatialPartition::move(LLDrawable *drawablep, LLSpatialGroup *curp, BOOL 
 	put(drawablep, was_visible);
 }
 
-class LLSpatialShift : public OctreeTraveler
+class LLSpatialShift : public LLSpatialGroup::OctreeTraveler
 {
 public:
 	const LLVector4a& mOffset;
 
 	LLSpatialShift(const LLVector4a& offset) : mOffset(offset) { }
-	virtual void visit(const OctreeNode* branch) 
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) 
 	{ 
 		((LLSpatialGroup*) branch->getListener(0))->shift(mOffset); 
 	}
@@ -943,17 +1780,17 @@ void LLSpatialPartition::shift(const LLVector4a &offset)
 	shifter.traverse(mOctree);
 }
 
-class LLOctreeCull : public LLViewerOctreeCull
+class LLOctreeCull : public LLSpatialGroup::OctreeTraveler
 {
 public:
-	LLOctreeCull(LLCamera* camera) : LLViewerOctreeCull(camera) {}
+	LLOctreeCull(LLCamera* camera)
+		: mCamera(camera), mRes(0) { }
 
-	virtual bool earlyFail(LLViewerOctreeGroup* base_group)
+	virtual bool earlyFail(LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
 		group->checkOcclusion();
 
-		if (group->getOctreeNode()->getParent() &&	//never occlusion cull the root node
+		if (group->mOctreeNode->getParent() &&	//never occlusion cull the root node
 		  	LLPipeline::sUseOcclusion &&			//ignore occlusion if disabled
 			group->isOcclusionState(LLSpatialGroup::OCCLUDED))
 		{
@@ -964,36 +1801,100 @@ public:
 		return false;
 	}
 	
-	virtual S32 frustumCheck(const LLViewerOctreeGroup* group)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
 	{
-		S32 res = AABBInFrustumNoFarClipGroupBounds(group);
+		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
+
+		if (earlyFail(group))
+		{
+			return;
+		}
+		
+		if (mRes == 2 || 
+			(mRes && group->isState(LLSpatialGroup::SKIP_FRUSTUM_CHECK)))
+		{	//fully in, just add everything
+			LLSpatialGroup::OctreeTraveler::traverse(n);
+		}
+		else
+		{
+			mRes = frustumCheck(group);
+				
+			if (mRes)
+			{ //at least partially in, run on down
+				LLSpatialGroup::OctreeTraveler::traverse(n);
+			}
+
+			mRes = 0;
+		}
+	}
+	
+	virtual S32 frustumCheck(const LLSpatialGroup* group)
+	{
+		S32 res = mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1]);
 		if (res != 0)
 		{
-			res = llmin(res, AABBSphereIntersectGroupExtents(group));
+			res = llmin(res, AABBSphereIntersect(group->mExtents[0], group->mExtents[1], mCamera->getOrigin(), mCamera->mFrustumCornerDist));
 		}
 		return res;
 	}
 
-	virtual S32 frustumCheckObjects(const LLViewerOctreeGroup* group)
+	virtual S32 frustumCheckObjects(const LLSpatialGroup* group)
 	{
-		S32 res = AABBInFrustumNoFarClipObjectBounds(group);
+		S32 res = mCamera->AABBInFrustumNoFarClip(group->mObjectBounds[0], group->mObjectBounds[1]);
 		if (res != 0)
 		{
-			res = llmin(res, AABBSphereIntersectObjectExtents(group));
+			res = llmin(res, AABBSphereIntersect(group->mObjectExtents[0], group->mObjectExtents[1], mCamera->getOrigin(), mCamera->mFrustumCornerDist));
 		}
 		return res;
 	}
 
-	virtual void processGroup(LLViewerOctreeGroup* base_group)
+	virtual bool checkObjects(const LLSpatialGroup::OctreeNode* branch, const LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
+		if (branch->getElementCount() == 0) //no elements
+		{
+			return false;
+		}
+		else if (branch->getChildCount() == 0) //leaf state, already checked tightest bounding box
+		{
+			return true;
+		}
+		else if (mRes == 1 && !frustumCheckObjects(group)) //no objects in frustum
+		{
+			return false;
+		}
+		
+		return true;
+	}
+
+	virtual void preprocess(LLSpatialGroup* group)
+	{
+		
+	}
+	
+	virtual void processGroup(LLSpatialGroup* group)
+	{
 		if (group->needsUpdate() ||
-			group->getVisible(LLViewerCamera::sCurCameraID) < LLDrawable::getCurrentFrame() - 1)
+			group->mVisible[LLViewerCamera::sCurCameraID] < LLDrawable::getCurrentFrame() - 1)
 		{
 			group->doOcclusion(mCamera);
 		}
 		gPipeline.markNotCulled(group, *mCamera);
 	}
+	
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) 
+	{	
+		LLSpatialGroup* group = (LLSpatialGroup*) branch->getListener(0);
+
+		preprocess(group);
+		
+		if (checkObjects(branch, group))
+		{
+			processGroup(group);
+		}
+	}
+
+	LLCamera *mCamera;
+	S32 mRes;
 };
 
 class LLOctreeCullNoFarClip : public LLOctreeCull
@@ -1002,14 +1903,14 @@ public:
 	LLOctreeCullNoFarClip(LLCamera* camera) 
 		: LLOctreeCull(camera) { }
 
-	virtual S32 frustumCheck(const LLViewerOctreeGroup* group)
+	virtual S32 frustumCheck(const LLSpatialGroup* group)
 	{
-		return AABBInFrustumNoFarClipGroupBounds(group);
+		return mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1]);
 	}
 
-	virtual S32 frustumCheckObjects(const LLViewerOctreeGroup* group)
+	virtual S32 frustumCheckObjects(const LLSpatialGroup* group)
 	{
-		S32 res = AABBInFrustumNoFarClipObjectBounds(group);
+		S32 res = mCamera->AABBInFrustumNoFarClip(group->mObjectBounds[0], group->mObjectBounds[1]);
 		return res;
 	}
 };
@@ -1020,14 +1921,14 @@ public:
 	LLOctreeCullShadow(LLCamera* camera)
 		: LLOctreeCull(camera) { }
 
-	virtual S32 frustumCheck(const LLViewerOctreeGroup* group)
+	virtual S32 frustumCheck(const LLSpatialGroup* group)
 	{
-		return AABBInFrustumGroupBounds(group);
+		return mCamera->AABBInFrustum(group->mBounds[0], group->mBounds[1]);
 	}
 
-	virtual S32 frustumCheckObjects(const LLViewerOctreeGroup* group)
+	virtual S32 frustumCheckObjects(const LLSpatialGroup* group)
 	{
-		return AABBInFrustumObjectBounds(group);
+		return mCamera->AABBInFrustum(group->mObjectBounds[0], group->mObjectBounds[1]);
 	}
 };
 
@@ -1037,11 +1938,9 @@ public:
 	LLOctreeCullVisExtents(LLCamera* camera, LLVector4a& min, LLVector4a& max)
 		: LLOctreeCullShadow(camera), mMin(min), mMax(max), mEmpty(TRUE) { }
 
-	virtual bool earlyFail(LLViewerOctreeGroup* base_group)
+	virtual bool earlyFail(LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
-
-		if (group->getOctreeNode()->getParent() &&	//never occlusion cull the root node
+		if (group->mOctreeNode->getParent() &&	//never occlusion cull the root node
 			LLPipeline::sUseOcclusion &&			//ignore occlusion if disabled
 			group->isOcclusionState(LLSpatialGroup::OCCLUDED))
 		{
@@ -1051,7 +1950,7 @@ public:
 		return false;
 	}
 
-	virtual void traverse(const OctreeNode* n)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* n)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) n->getListener(0);
 
@@ -1060,10 +1959,10 @@ public:
 			return;
 		}
 		
-		if ((mRes && group->hasState(LLSpatialGroup::eSpatialState(LLSpatialGroup::SKIP_FRUSTUM_CHECK))) ||
+		if ((mRes && group->isState(LLSpatialGroup::SKIP_FRUSTUM_CHECK)) ||
 			mRes == 2)
 		{	//don't need to do frustum check
-			OctreeTraveler::traverse(n);
+			LLSpatialGroup::OctreeTraveler::traverse(n);
 		}
 		else
 		{  
@@ -1071,35 +1970,31 @@ public:
 				
 			if (mRes)
 			{ //at least partially in, run on down
-				OctreeTraveler::traverse(n);
+				LLSpatialGroup::OctreeTraveler::traverse(n);
 			}
 
 			mRes = 0;
 		}
 	}
 
-	virtual void processGroup(LLViewerOctreeGroup* base_group)
+	virtual void processGroup(LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
-		
-		llassert(!group->hasState(LLSpatialGroup::eSpatialState(LLSpatialGroup::DIRTY)) && !group->isEmpty());
+		llassert(!group->isState(LLSpatialGroup::DIRTY) && !group->isEmpty());
 		
 		if (mRes < 2)
 		{
-			if (AABBInFrustumObjectBounds(group) > 0)
+			if (mCamera->AABBInFrustum(group->mObjectBounds[0], group->mObjectBounds[1]) > 0)
 			{
 				mEmpty = FALSE;
-				const LLVector4a* exts = group->getObjectExtents();
-				update_min_max(mMin, mMax, exts[0]);
-				update_min_max(mMin, mMax, exts[1]);
+				update_min_max(mMin, mMax, group->mObjectExtents[0]);
+				update_min_max(mMin, mMax, group->mObjectExtents[1]);
 			}
 		}
 		else
 		{
 			mEmpty = FALSE;
-			const LLVector4a* exts = group->getExtents();
-			update_min_max(mMin, mMax, exts[0]);
-			update_min_max(mMin, mMax, exts[1]);
+			update_min_max(mMin, mMax, group->mExtents[0]);
+			update_min_max(mMin, mMax, group->mExtents[1]);
 		}
 	}
 
@@ -1114,12 +2009,10 @@ public:
 	LLOctreeCullDetectVisible(LLCamera* camera)
 		: LLOctreeCullShadow(camera), mResult(FALSE) { }
 
-	virtual bool earlyFail(LLViewerOctreeGroup* base_group)
+	virtual bool earlyFail(LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
-
 		if (mResult || //already found a node, don't check any more
-			(group->getOctreeNode()->getParent() &&	//never occlusion cull the root node
+			(group->mOctreeNode->getParent() &&	//never occlusion cull the root node
 			 LLPipeline::sUseOcclusion &&			//ignore occlusion if disabled
 			 group->isOcclusionState(LLSpatialGroup::OCCLUDED)))
 		{
@@ -1129,9 +2022,9 @@ public:
 		return false;
 	}
 
-	virtual void processGroup(LLViewerOctreeGroup* base_group)
+	virtual void processGroup(LLSpatialGroup* group)
 	{
-		if (base_group->isVisible())
+		if (group->isVisible())
 		{
 			mResult = TRUE;
 		}
@@ -1146,21 +2039,18 @@ public:
 	LLOctreeSelect(LLCamera* camera, std::vector<LLDrawable*>* results)
 		: LLOctreeCull(camera), mResults(results) { }
 
-	virtual bool earlyFail(LLViewerOctreeGroup* group) { return false; }
-	virtual void preprocess(LLViewerOctreeGroup* group) { }
+	virtual bool earlyFail(LLSpatialGroup* group) { return false; }
+	virtual void preprocess(LLSpatialGroup* group) { }
 
-	virtual void processGroup(LLViewerOctreeGroup* base_group)
+	virtual void processGroup(LLSpatialGroup* group)
 	{
-		LLSpatialGroup* group = (LLSpatialGroup*)base_group;
-		OctreeNode* branch = group->getOctreeNode();
+		LLSpatialGroup::OctreeNode* branch = group->mOctreeNode;
 
-		for (OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
+		OctreeGuard guard(branch);
+		for (LLSpatialGroup::OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
 		{
-			LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-			if(!drawable)
-			{
-				continue;
-			}
+			LLDrawable* drawable = *i;
+			
 			if (!drawable->isDead())
 			{
 				if (drawable->isSpatialBridge())
@@ -1273,39 +2163,35 @@ void drawBoxOutline(const LLVector4a& pos, const LLVector4a& size)
 	drawBoxOutline(reinterpret_cast<const LLVector3&>(pos), reinterpret_cast<const LLVector3&>(size));
 }
 
-class LLOctreeDirty : public OctreeTraveler
+class LLOctreeDirty : public LLOctreeTraveler<LLDrawable>
 {
 public:
-	LLOctreeDirty(bool no_rebuild = false) : mNoRebuild(no_rebuild){}
-
-	virtual void visit(const OctreeNode* state)
+	virtual void visit(const LLOctreeNode<LLDrawable>* state)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) state->getListener(0);
 		group->destroyGL();
 
-		{OctreeGuard guard(group->getOctreeNode());
+		{OctreeGuard guard(group->mOctreeNode);
 		for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 		{
-			LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-			if(!drawable)
+			LLDrawable* drawable = *i;
+			if (drawable->getVObj().notNull())
 			{
-				continue;
+				drawable->getVObj()->resetVertexBuffers();
 			}
-			if (!mNoRebuild && drawable->getVObj().notNull() && !group->getSpatialPartition()->mRenderByGroup)
+			if (drawable->getVObj().notNull() && !group->mSpatialPartition->mRenderByGroup)
 			{
 				gPipeline.markRebuild(drawable, LLDrawable::REBUILD_ALL, TRUE);
 			}
+		}
 		}
 
 		for (LLSpatialGroup::bridge_list_t::iterator i = group->mBridgeList.begin(); i != group->mBridgeList.end(); ++i)
 		{
 			LLSpatialBridge* bridge = *i;
 			traverse(bridge->mOctree);
-		}}
+		}
 	}
-
-private:
-	BOOL mNoRebuild;
 };
 
 void LLSpatialPartition::restoreGL()
@@ -1318,12 +2204,16 @@ void LLSpatialPartition::resetVertexBuffers()
 	dirty.traverse(mOctree);
 }
 
+BOOL LLSpatialPartition::isOcclusionEnabled()
+{
+	return mOcclusionEnabled || LLPipeline::sUseOcclusion > 2;
+}
+
 BOOL LLSpatialPartition::getVisibleExtents(LLCamera& camera, LLVector3& visMin, LLVector3& visMax)
 {
 	LLVector4a visMina, visMaxa;
 	visMina.load3(visMin.mV);
 	visMaxa.load3(visMax.mV);
-
 	{
 		LLFastTimer ftm(FTM_CULL_REBOUND);		
 		LLSpatialGroup* group = (LLSpatialGroup*) mOctree->getListener(0);
@@ -1345,7 +2235,7 @@ BOOL LLSpatialPartition::visibleObjectsInFrustum(LLCamera& camera)
 	return vis.mResult;
 }
 
-S32 LLSpatialPartition::cull(LLCamera &camera, std::vector<LLDrawable *>* results)
+S32 LLSpatialPartition::cull(LLCamera &camera, std::vector<LLDrawable *>* results, BOOL for_select)
 {
 #if LL_OCTREE_PARANOIA_CHECK
 	((LLSpatialGroup*)mOctree->getListener(0))->checkStates();
@@ -1363,27 +2253,13 @@ S32 LLSpatialPartition::cull(LLCamera &camera, std::vector<LLDrawable *>* result
 	((LLSpatialGroup*)mOctree->getListener(0))->validate();
 #endif
 
-	LLOctreeSelect selecter(&camera, results);
-	selecter.traverse(mOctree);
-
-	return 0;
-}
-S32 LLSpatialPartition::cull(LLCamera &camera, bool do_occlusion)
-{
-#if LL_OCTREE_PARANOIA_CHECK
-	((LLSpatialGroup*)mOctree->getListener(0))->checkStates();
-#endif
+	
+	if (for_select)
 	{
-		LLFastTimer ftm(FTM_CULL_REBOUND);		
-		LLSpatialGroup* group = (LLSpatialGroup*) mOctree->getListener(0);
-		group->rebound();
+		LLOctreeSelect selecter(&camera, results);
+		selecter.traverse(mOctree);
 	}
-
-#if LL_OCTREE_PARANOIA_CHECK
-	((LLSpatialGroup*)mOctree->getListener(0))->validate();
-#endif
-
-	if (LLPipeline::sShadowRender)
+	else if (LLPipeline::sShadowRender)
 	{
 		LLFastTimer ftm(FTM_FRUSTUM_CULL);
 		LLOctreeCullShadow culler(&camera);
@@ -1404,6 +2280,49 @@ S32 LLSpatialPartition::cull(LLCamera &camera, bool do_occlusion)
 	
 	return 0;
 }
+
+BOOL earlyFail(LLCamera* camera, LLSpatialGroup* group)
+{
+	if (camera->getOrigin().isExactlyZero())
+	{
+		return FALSE;
+	}
+
+	static LLCachedControl<F32> vel("SHOcclusionFudge",SG_OCCLUSION_FUDGE);
+	LLVector4a fudge(vel*2.f);
+
+	const LLVector4a& c = group->mBounds[0];
+	static LLVector4a r;
+	r.setAdd(group->mBounds[1], fudge);
+
+	/*if (r.magVecSquared() > 1024.0*1024.0)
+	{
+		return TRUE;
+	}*/
+
+	LLVector4a e;
+	e.load3(camera->getOrigin().mV);
+	
+	LLVector4a min;
+	min.setSub(c,r);
+	LLVector4a max;
+	max.setAdd(c,r);
+	
+	S32 lt = e.lessThan(min).getGatheredBits() & 0x7;
+	if (lt)
+	{
+		return FALSE;
+	}
+
+	S32 gt = e.greaterThan(max).getGatheredBits() & 0x7;
+	if (gt)
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 
 void pushVerts(LLDrawInfo* params, U32 mask)
 {
@@ -1476,7 +2395,7 @@ void pushBufferVerts(LLVertexBuffer* buffer, U32 mask)
 
 void pushBufferVerts(LLSpatialGroup* group, U32 mask, bool push_alpha = true)
 {
-	if (group->getSpatialPartition()->mRenderByGroup)
+	if (group->mSpatialPartition->mRenderByGroup)
 	{
 		if (!group->mDrawMap.empty() && !group->mDrawMap.begin()->second.empty())
 		{
@@ -1502,8 +2421,7 @@ void pushBufferVerts(LLSpatialGroup* group, U32 mask, bool push_alpha = true)
 	}
 	else
 	{
-		const LLVector4a* bounds = group->getBounds();
-		drawBox(bounds[0], bounds[1]);
+		drawBox(group->mBounds[0], group->mBounds[1]);
 	}
 }
 
@@ -1511,7 +2429,7 @@ void pushVertsColorCoded(LLSpatialGroup* group, U32 mask)
 {
 	LLDrawInfo* params = NULL;
 
-	static LLColor4 colors[] = {
+	LLColor4 colors[] = {
 		LLColor4::green,
 		LLColor4::green1,
 		LLColor4::green2,
@@ -1568,21 +2486,15 @@ void renderOctree(LLSpatialGroup* group)
 			gGL.diffuseColor4f(1,0,0,group->mBuilt);
 			gGL.flush();
 			glLineWidth(5.f);
-
-			const LLVector4a* bounds = group->getObjectBounds();
-			drawBoxOutline(bounds[0], bounds[1]);
+			drawBoxOutline(group->mObjectBounds[0], group->mObjectBounds[1]);
 			gGL.flush();
 			glLineWidth(1.f);
 			gGL.flush();
-			OctreeGuard guard(group->getOctreeNode());
+			OctreeGuard guard(group->mOctreeNode);
 			for (LLSpatialGroup::element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 			{
-				LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-				if(!drawable)
-				{
-					continue;
-				}
-				if (!group->getSpatialPartition()->isBridge())
+				LLDrawable* drawable = *i;
+				if (!group->mSpatialPartition->isBridge())
 				{
 					gGL.pushMatrix();
 					LLVector3 trans = drawable->getRegion()->getOriginAgent();
@@ -1614,7 +2526,7 @@ void renderOctree(LLSpatialGroup* group)
 					}
 				}
 
-				if (!group->getSpatialPartition()->isBridge())
+				if (!group->mSpatialPartition->isBridge())
 				{
 					gGL.popMatrix();
 				}
@@ -1626,7 +2538,7 @@ void renderOctree(LLSpatialGroup* group)
 	else
 	{
 		if (group->mBufferUsage == GL_STATIC_DRAW_ARB && !group->isEmpty() 
-			&& group->getSpatialPartition()->mRenderByGroup)
+			&& group->mSpatialPartition->mRenderByGroup)
 		{
 			col.setVec(0.8f, 0.4f, 0.1f, 0.1f);
 		}
@@ -1639,8 +2551,7 @@ void renderOctree(LLSpatialGroup* group)
 	gGL.diffuseColor4fv(col.mV);
 	LLVector4a fudge;
 	fudge.splat(0.001f);
-	const LLVector4a* bounds = group->getObjectBounds();
-	LLVector4a size = bounds[1];
+	LLVector4a size = group->mObjectBounds[1];
 	size.mul(1.01f);
 	size.add(fudge);
 
@@ -1658,9 +2569,7 @@ void renderOctree(LLSpatialGroup* group)
 		//drawBoxOutline(group->mObjectBounds[0], group->mObjectBounds[1]);
 
 		gGL.diffuseColor4f(0,1,1,1);
-
-		const LLVector4a* bounds = group->getBounds();
-		drawBoxOutline(bounds[0], bounds[1]);
+		drawBoxOutline(group->mBounds[0],group->mBounds[1]);
 		
 		//draw bounding box for draw info
 		/*if (group->mSpatialPartition->mRenderByGroup)
@@ -1683,7 +2592,7 @@ void renderOctree(LLSpatialGroup* group)
 		}*/
 	}
 	
-//	OctreeNode* node = group->mOctreeNode;
+//	LLSpatialGroup::OctreeNode* node = group->mOctreeNode;
 //	gGL.color4f(0,1,0,1);
 //	drawBoxOutline(LLVector3(node->getCenter()), LLVector3(node->getSize()));
 }
@@ -2439,10 +3348,10 @@ void renderPhysicsShape(LLDrawable* drawable, LLVOVolume* volume)
 
 void renderPhysicsShapes(LLSpatialGroup* group)
 {
-	OctreeGuard guard(group->getOctreeNode());
-	for (OctreeNode::const_element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
+	OctreeGuard guard(group->mOctreeNode);
+	for (LLSpatialGroup::OctreeNode::const_element_iter i = group->getDataBegin(); i != group->getDataEnd(); ++i)
 	{
-		LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
+		LLDrawable* drawable = *i;
 		if (!drawable)
 		{
 			continue;
@@ -2465,7 +3374,7 @@ void renderPhysicsShapes(LLSpatialGroup* group)
 			LLVOVolume* volume = drawable->getVOVolume();
 			if (volume && !volume->isAttachment() && volume->getPhysicsShapeType() != LLViewerObject::PHYSICS_SHAPE_NONE )
 			{
-				if (!group->getSpatialPartition()->isBridge())
+				if (!group->mSpatialPartition->isBridge())
 				{
 					gGL.pushMatrix();
 					LLVector3 trans = drawable->getRegion()->getOriginAgent();
@@ -2930,18 +3839,17 @@ void renderAgentTarget(LLVOAvatar* avatar)
 }
 
 
-class LLOctreeRenderNonOccluded : public OctreeTraveler
+class LLOctreeRenderNonOccluded : public LLOctreeTraveler<LLDrawable>
 {
 public:
 	LLCamera* mCamera;
 	LLOctreeRenderNonOccluded(LLCamera* camera): mCamera(camera) {}
 	
-	virtual void traverse(const OctreeNode* node)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* node)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) node->getListener(0);
 		
-		const LLVector4a* bounds = group->getBounds();
-		if (!mCamera || mCamera->AABBInFrustumNoFarClip(bounds[0], bounds[1]))
+		if (!mCamera || mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1]))
 		{
 			node->accept(this);
 			stop_glerror();
@@ -2981,11 +3889,11 @@ public:
 		}
 	}
 
-	virtual void visit(const OctreeNode* branch)
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) branch->getListener(0);
-		const LLVector4a* bounds = group->getBounds();
-		if (group->hasState(LLSpatialGroup::GEOM_DIRTY) || (mCamera && !mCamera->AABBInFrustumNoFarClip(bounds[0], bounds[1])))
+
+		if (group->isState(LLSpatialGroup::GEOM_DIRTY) || (mCamera && !mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1])))
 		{
 			return;
 		}
@@ -3000,19 +3908,15 @@ public:
 			if (!group->isEmpty())
 			{
 				gGL.diffuseColor3f(0,0,1);
-				const LLVector4a* obj_bounds = group->getObjectBounds();
-				drawBoxOutline(obj_bounds[0], obj_bounds[1]);
+				drawBoxOutline(group->mObjectBounds[0],
+								group->mObjectBounds[1]);
 			}
 		}
 
 		{OctreeGuard guard(branch);
-		for (OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
+		for (LLSpatialGroup::OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
 		{
-			LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-			if(!drawable)
-			{
-				continue;
-			}
+			LLDrawable* drawable = *i;
 					
 			if (gPipeline.hasRenderDebugMask(LLPipeline::RENDER_DEBUG_BBOXES))
 			{
@@ -3136,18 +4040,17 @@ public:
 };
 
 
-class LLOctreeRenderPhysicsShapes : public OctreeTraveler
+class LLOctreeRenderPhysicsShapes : public LLOctreeTraveler<LLDrawable>
 {
 public:
 	LLCamera* mCamera;
 	LLOctreeRenderPhysicsShapes(LLCamera* camera): mCamera(camera) {}
 	
-	virtual void traverse(const OctreeNode* node)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* node)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) node->getListener(0);
 		
-		const LLVector4a* bounds = group->getBounds();
-		if (!mCamera || mCamera->AABBInFrustumNoFarClip(bounds[0], bounds[1]))
+		if (!mCamera || mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1]))
 		{
 			node->accept(this);
 			stop_glerror();
@@ -3165,24 +4068,23 @@ public:
 		}
 	}
 
-	virtual void visit(const OctreeNode* branch)
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch)
 	{
 		
 	}
 };
 
-class LLOctreePushBBoxVerts : public OctreeTraveler
+class LLOctreePushBBoxVerts : public LLOctreeTraveler<LLDrawable>
 {
 public:
 	LLCamera* mCamera;
 	LLOctreePushBBoxVerts(LLCamera* camera): mCamera(camera) {}
 	
-	virtual void traverse(const OctreeNode* node)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* node)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) node->getListener(0);
 		
-		const LLVector4a* bounds = group->getBounds();
-		if (!mCamera || mCamera->AABBInFrustum(bounds[0], bounds[1]))
+		if (!mCamera || mCamera->AABBInFrustum(group->mBounds[0], group->mBounds[1]))
 		{
 			node->accept(this);
 
@@ -3193,24 +4095,20 @@ public:
 		}
 	}
 
-	virtual void visit(const OctreeNode* branch)
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) branch->getListener(0);
 
-		const LLVector4a* bounds = group->getBounds();
-		if (group->hasState(LLSpatialGroup::GEOM_DIRTY) || (mCamera && !mCamera->AABBInFrustumNoFarClip(bounds[0], bounds[1])))
+		if (group->isState(LLSpatialGroup::GEOM_DIRTY) || (mCamera && !mCamera->AABBInFrustumNoFarClip(group->mBounds[0], group->mBounds[1])))
 		{
 			return;
 		}
 
 		OctreeGuard guard(branch);
-		for (OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
+		for (LLSpatialGroup::OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
 		{
-			LLDrawable* drawable = (LLDrawable*)(*i)->getDrawable();
-			if(!drawable)
-		{
-				continue;
-			}
+			LLDrawable* drawable = *i;
+						
 			renderBoundingBox(drawable, FALSE);			
 		}
 	}
@@ -3222,7 +4120,7 @@ void LLSpatialPartition::renderIntersectingBBoxes(LLCamera* camera)
 	pusher.traverse(mOctree);
 }
 
-class LLOctreeStateCheck : public OctreeTraveler
+class LLOctreeStateCheck : public LLOctreeTraveler<LLDrawable>
 {
 public:
 	U32 mInheritedMask[LLViewerCamera::NUM_CAMERAS];
@@ -3235,7 +4133,7 @@ public:
 		}
 	}
 
-	virtual void traverse(const OctreeNode* node)
+	virtual void traverse(const LLSpatialGroup::OctreeNode* node)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) node->getListener(0);
 		
@@ -3262,7 +4160,7 @@ public:
 	}
 	
 
-	virtual void visit(const OctreeNode* state)
+	virtual void visit(const LLOctreeNode<LLDrawable>* state)
 	{
 		LLSpatialGroup* group = (LLSpatialGroup*) state->getListener(0);
 
@@ -3274,9 +4172,9 @@ public:
 			}
 		}
 
-		if (group->hasState(LLSpatialGroup::eSpatialState(LLSpatialGroup::DIRTY)))
+		if (group->isState(LLSpatialGroup::DIRTY))
 		{
-			assert_parent_state(group, LLSpatialGroup::eSpatialState(LLSpatialGroup::DIRTY));
+			assert_parent_state(group, LLSpatialGroup::DIRTY);
 		}
 	}
 
@@ -3285,7 +4183,7 @@ public:
 		LLSpatialGroup* parent = group->getParent();
 		while (parent)
 		{
-			if (!parent->hasState(state))
+			if (!parent->isState(state))
 			{
 				LL_ERRS() << "Spatial group failed parent state check." << LL_ENDL;
 			}
@@ -3401,7 +4299,7 @@ BOOL LLSpatialPartition::isVisible(const LLVector3& v)
 }
 
 LL_ALIGN_PREFIX(16)
-class LLOctreeIntersect : public LLOctreeTraveler<LLViewerOctreeEntry>
+class LLOctreeIntersect : public LLSpatialGroup::OctreeTraveler
 {
 public:
 	LL_ALIGN_16(LLVector4a mStart);
@@ -3429,23 +4327,23 @@ public:
 	{
 	}
 	
-	virtual void visit(const OctreeNode* branch) 
+	virtual void visit(const LLSpatialGroup::OctreeNode* branch) 
 	{	
 		OctreeGuard guard(branch);
-		for (OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
+		for (LLSpatialGroup::OctreeNode::const_element_iter i = branch->getDataBegin(); i != branch->getDataEnd(); ++i)
 		{
 			check(*i);
 		}
 	}
 
-	virtual LLDrawable* check(const OctreeNode* node)
+	virtual LLDrawable* check(const LLSpatialGroup::OctreeNode* node)
 	{
 		node->accept(this);
 	
 		OctreeGuard guard(node);
 		for (U32 i = 0; i < node->getChildCount(); i++)
 		{
-			const OctreeNode* child = node->getChild(i);
+			const LLSpatialGroup::OctreeNode* child = node->getChild(i);
 			LLVector3 res;
 
 			LLSpatialGroup* group = (LLSpatialGroup*) child->getListener(0);
@@ -3453,16 +4351,15 @@ public:
 			LLVector4a size;
 			LLVector4a center;
 			
-			const LLVector4a* bounds = group->getBounds();
-			size = bounds[1];
-			center = bounds[0];
+			size = group->mBounds[1];
+			center = group->mBounds[0];
 			
 			LLVector4a local_start = mStart;
 			LLVector4a local_end   = mEnd;
 
-			if (group->getSpatialPartition()->isBridge())
+			if (group->mSpatialPartition->isBridge())
 			{
-				LLMatrix4a local_matrix = group->getSpatialPartition()->asBridge()->mDrawable->getRenderMatrix();
+				LLMatrix4a local_matrix = group->mSpatialPartition->asBridge()->mDrawable->getRenderMatrix();
 				local_matrix.invert();
 
 				local_matrix.affineTransform(mStart, local_start);
@@ -3478,10 +4375,8 @@ public:
 		return mHit;
 	}
 
-	virtual bool check(LLViewerOctreeEntry* entry)
+	virtual bool check(LLDrawable* drawable)
 	{	
-		LLDrawable* drawable = (LLDrawable*)entry->getDrawable();
-	
 		if (!drawable || !gPipeline.hasRenderType(drawable->getRenderType()) || !drawable->isVisible())
 		{
 			return false;

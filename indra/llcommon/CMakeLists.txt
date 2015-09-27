@@ -142,14 +142,20 @@ set(llcommon_HEADER_FILES
     llcrc.h
     llcriticaldamp.h
     llcursortypes.h
+    lldarray.h
+    lldarrayptr.h
     lldate.h
     lldefs.h
     lldependencies.h
     lldepthstack.h
     lldictionary.h
+    lldlinked.h
+    lldqueueptr.h
     llendianswizzle.h
+    llenum.h
     llerror.h
     llerrorcontrol.h
+    llerrorlegacy.h
     llerrorthread.h
     llevent.h
     lleventapi.h
@@ -170,7 +176,7 @@ set(llcommon_HEADER_FILES
     llhandle.h
     llheartbeat.h
     llhttpstatuscodes.h
-    llindexedvector.h
+    llindexedqueue.h
     llinitparam.h
     llinstancetracker.h
     llkeythrottle.h

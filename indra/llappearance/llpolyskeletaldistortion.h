@@ -39,6 +39,7 @@
 //#include "llpolymorph.h"
 #include "lljoint.h"
 #include "llviewervisualparam.h"
+//#include "lldarray.h"
 
 //class LLSkinJoint;
 class LLAvatarAppearance;

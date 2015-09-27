@@ -38,6 +38,7 @@
 #include "lluuid.h"
 #include "stdenums.h"
 #include "llassetstorage.h"
+#include "lldarray.h"
 #include "llpermissions.h"
 #include "llwindow.h"
 #include "llviewerinventory.h"

@@ -96,7 +96,7 @@ LLFrameStats::LLFrameStats()
 
 LLFrameStats::~LLFrameStats()
 {
-	mFrameData.clear();
+	mFrameData.reset();
 }
 
 void LLFrameStats::start(const EStat stat)
@@ -149,7 +149,7 @@ void LLFrameStats::addFrameData()
 	gTerseObjectUpdates = 0;
 
 
-	mFrameData.push_back(frame_data);
+	mFrameData.put(frame_data);
 	if (mUseTimer)
 	{
 		if (mTimer.getElapsedTimeF32() > mStopTime)
@@ -162,11 +162,11 @@ void LLFrameStats::addFrameData()
 
 void LLFrameStats::dump()
 {
-	if (mFrameData.size())
+	if (mFrameData.count())
 	{
 		F32 total_time = 0;
 		S64 total_triangles = 0;
-		S32 total_frames = mFrameData.size();
+		S32 total_frames = mFrameData.count();
 		S32 total_num_objects = 0;
 
 		time_t cur_time;
@@ -191,11 +191,11 @@ void LLFrameStats::dump()
 			LL_INFOS() << "Couldn't open file for dumping frame stats!" << LL_ENDL;
 			return;
 		}
-		LL_INFOS() << "Dumping frame statistics for " << mFrameData.size() << " frames" << LL_ENDL;
+		LL_INFOS() << "Dumping frame statistics for " << mFrameData.count() << " frames" << LL_ENDL;
 
 		fprintf(fp, "Time\tNumTriangles\t");
 
-		U32 i;
+		S32 i;
 		for (i = 0; i < NUM_STATS; i++)
 		{
 			fprintf(fp, "%s\t", sStatLabels[i].c_str());
@@ -203,7 +203,7 @@ void LLFrameStats::dump()
 		fprintf(fp, "Full Updates\tTerse Updates\tTotal Vorbis\tLong Vorbis\tNum Vorbis Decodes\t");
 		fprintf(fp, "\n");
 
-		for (i = 0; i < mFrameData.size(); i++)
+		for (i = 0; i < mFrameData.count(); i++)
 		{
 			total_time += mFrameData[i].mTotalDuration;
 			total_triangles += mFrameData[i].mNumTriangles;
@@ -247,7 +247,7 @@ void LLFrameStats::dump()
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
-	mFrameData.clear();
+	mFrameData.reset();
 }
 
 void LLFrameStats::setTrackStats(const BOOL track_stats)
@@ -267,7 +267,7 @@ void LLFrameStats::setTrackStats(const BOOL track_stats)
 	if (track_stats)
 	{
 		// Reset the frame data
-		mFrameData.clear();
+		mFrameData.reset();
 	}
 	mTrackStats = track_stats;
 }

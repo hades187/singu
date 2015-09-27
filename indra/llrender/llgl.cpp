@@ -1465,29 +1465,19 @@ void do_assert_glerror()
 
 void assert_glerror()
 {
-	if(!gNoRender)
-	{}
-	else
-	{
+	if (gNoRender)
 		return;
-	}
 	if (!gGLActive)
 	{
 		//LL_WARNS() << "GL used while not active!" << LL_ENDL;
-		
-		if (!gDebugSession)
-		{}
-		else
+
+		if (gDebugSession)
 		{
 			//ll_fail("GL used while not active");
 		}
 	}
 
-	if (!gDebugGL) 
-	{
-		//funny looking if for branch prediction -- gDebugGL is almost always false and assert_glerror is called often
-	}
-	else
+	if (gDebugGL) 
 	{
 		do_assert_glerror();
 	}

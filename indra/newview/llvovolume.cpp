@@ -3934,9 +3934,8 @@ void LLRiggedVolume::update(const LLMeshSkinInfo* skin, LLVOAvatar* avatar, cons
 				{
 					F32 w = weight[j][k];
 
-					const F32 w_floor = floorf(w);
-					idx[k] = (S32) w_floor;
-					wght[k] = w - w_floor;
+					idx[k] = (S32) floorf(w);
+					wght[k] = w - floorf(w);
 					scale += wght[k];
 				}
 
@@ -3948,10 +3947,8 @@ void LLRiggedVolume::update(const LLMeshSkinInfo* skin, LLVOAvatar* avatar, cons
 				for (U32 k = 0; k < 4; k++)
 				{
 					F32 w = wght[k];
-
 					LLMatrix4a src;
-					// clamp k to kMaxJoints to avoid reading garbage off stack in release
-					src.setMul(mp[(idx[k] < count) ? idx[k] : 0], w);
+					src.setMul(mp[idx[k]], w);
 
 					final_mat.add(src);
 				}
@@ -4405,9 +4402,9 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 
 	group->mLastUpdateViewAngle = group->mViewAngle;
 
-	if (!group->hasState(LLSpatialGroup::GEOM_DIRTY | LLSpatialGroup::ALPHA_DIRTY))
+	if (!group->isState(LLSpatialGroup::GEOM_DIRTY | LLSpatialGroup::ALPHA_DIRTY))
 	{
-		if (group->hasState(LLSpatialGroup::MESH_DIRTY) && !LLPipeline::sDelayVBUpdate)
+		if (group->isState(LLSpatialGroup::MESH_DIRTY) && !LLPipeline::sDelayVBUpdate)
 		{
 			rebuildMesh(group);
 		}
@@ -4420,7 +4417,7 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 	
 	LLVOAvatar* pAvatarVO = NULL;
 
-	LLSpatialBridge* bridge = group->getSpatialPartition()->asBridge();
+	LLSpatialBridge* bridge = group->mSpatialPartition->asBridge();
 	if (bridge)
 	{
 		if (bridge->mAvatar.isNull())
@@ -4445,7 +4442,7 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 	group->mSurfaceArea = 0;
 	
 	//cache object box size since it might be used for determining visibility
-	group->mObjectBoxSize = group->getObjectBounds()[1].getLength3().getF32();
+	group->mObjectBoxSize = group->mObjectBounds[1].getLength3().getF32();
 
 	group->clearDrawMap();
 
@@ -4469,12 +4466,12 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 	U32 spec_count = 0;
 	U32 normspec_count = 0;
 
-	U32 useage = group->getSpatialPartition()->mBufferUsage;
+	U32 useage = group->mSpatialPartition->mBufferUsage;
 
 	static const LLCachedControl<S32> render_max_vbo_size("RenderMaxVBOSize", 512);
 	static const LLCachedControl<S32> render_max_node_size("RenderMaxNodeSize",8192);
-	U32 max_vertices = (render_max_vbo_size*1024)/LLVertexBuffer::calcVertexSize(group->getSpatialPartition()->mVertexDataMask);
-	U32 max_total = (render_max_node_size*1024)/LLVertexBuffer::calcVertexSize(group->getSpatialPartition()->mVertexDataMask);
+	U32 max_vertices = (render_max_vbo_size*1024)/LLVertexBuffer::calcVertexSize(group->mSpatialPartition->mVertexDataMask);
+	U32 max_total = (render_max_node_size*1024)/LLVertexBuffer::calcVertexSize(group->mSpatialPartition->mVertexDataMask);
 	max_vertices = llmin(max_vertices, (U32) 65535);
 
 	U32 cur_total = 0;
@@ -4485,10 +4482,10 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 		LLFastTimer t(FTM_REBUILD_VOLUME_FACE_LIST);
 
 		//get all the faces into a list
-		OctreeGuard guard(group->getOctreeNode());
+		OctreeGuard guard(group->mOctreeNode);
 		for (LLSpatialGroup::element_iter drawable_iter = group->getDataBegin(); drawable_iter != group->getDataEnd(); ++drawable_iter)
 		{
-			LLDrawable* drawablep = (LLDrawable*)(*drawable_iter)->getDrawable();
+			LLDrawable* drawablep = *drawable_iter;
 		
 			if (drawablep->isDead() || drawablep->isState(LLDrawable::FORCE_INVISIBLE) )
 			{
@@ -5252,10 +5249,10 @@ void LLVolumeGeometryManager::rebuildGeom(LLSpatialGroup* group)
 	if (!LLPipeline::sDelayVBUpdate)
 	{
 		//drawables have been rebuilt, clear rebuild status
-		OctreeGuard guard(group->getOctreeNode());
+		OctreeGuard guard(group->mOctreeNode);
 		for (LLSpatialGroup::element_iter drawable_iter = group->getDataBegin(); drawable_iter != group->getDataEnd(); ++drawable_iter)
 		{
-			LLDrawable* drawablep = (LLDrawable*)(*drawable_iter)->getDrawable();
+			LLDrawable* drawablep = *drawable_iter;
 			drawablep->clearState(LLDrawable::REBUILD_ALL);
 		}
 	}
@@ -5283,14 +5280,14 @@ void LLVolumeGeometryManager::rebuildMesh(LLSpatialGroup* group)
 {
 	llassert(group);
 	static int warningsCount = 20;
-	if (group && group->hasState(LLSpatialGroup::MESH_DIRTY) && !group->hasState(LLSpatialGroup::GEOM_DIRTY))
+	if (group && group->isState(LLSpatialGroup::MESH_DIRTY) && !group->isState(LLSpatialGroup::GEOM_DIRTY))
 	{
 		LLFastTimer ftm(FTM_REBUILD_VOLUME_VB);
 		LLFastTimer t(FTM_REBUILD_VOLUME_GEN_DRAW_INFO); //make sure getgeometryvolume shows up in the right place in timers
 
 		group->mBuilt = 1.f;
 		
-		OctreeGuard guard(group->getOctreeNode());
+		OctreeGuard guard(group->mOctreeNode);
 		S32 num_mapped_vertex_buffer = LLVertexBuffer::sMappedCount ;
 
 		const U32 MAX_BUFFER_COUNT = 4096;
@@ -5300,7 +5297,7 @@ void LLVolumeGeometryManager::rebuildMesh(LLSpatialGroup* group)
 
 		for (LLSpatialGroup::element_iter drawable_iter = group->getDataBegin(); drawable_iter != group->getDataEnd(); ++drawable_iter)
 		{
-			LLDrawable* drawablep = (LLDrawable*)(*drawable_iter)->getDrawable();
+			LLDrawable* drawablep = *drawable_iter;
 
 			if (!drawablep->isDead() && drawablep->isState(LLDrawable::REBUILD_ALL) && !drawablep->isState(LLDrawable::RIGGED) )
 			{
@@ -5370,10 +5367,10 @@ void LLVolumeGeometryManager::rebuildMesh(LLSpatialGroup* group)
 				LL_WARNS() << "Not all mapped vertex buffers are unmapped!" << LL_ENDL ;
 				warningsCount = 1;
 			}
-			OctreeGuard guard(group->getOctreeNode());
+			OctreeGuard guard(group->mOctreeNode);
 			for (LLSpatialGroup::element_iter drawable_iter = group->getDataBegin(); drawable_iter != group->getDataEnd(); ++drawable_iter)
 			{
-				LLDrawable* drawablep = (LLDrawable*)(*drawable_iter)->getDrawable();
+				LLDrawable* drawablep = *drawable_iter;
 				for (S32 i = 0; i < drawablep->getNumFaces(); ++i)
 				{
 					LLFace* face = drawablep->getFace(i);
@@ -5501,7 +5498,7 @@ void LLVolumeGeometryManager::genDrawInfo(LLSpatialGroup* group, U32 mask, LLFac
 
 	//calculate maximum number of vertices to store in a single buffer
 	static const LLCachedControl<S32> render_max_vbo_size("RenderMaxVBOSize", 512);
-	U32 max_vertices = (render_max_vbo_size*1024)/LLVertexBuffer::calcVertexSize(group->getSpatialPartition()->mVertexDataMask);
+	U32 max_vertices = (render_max_vbo_size*1024)/LLVertexBuffer::calcVertexSize(group->mSpatialPartition->mVertexDataMask);
 	max_vertices = llmin(max_vertices, (U32) 65535);
 
 	{
@@ -6338,17 +6335,17 @@ void LLVolumeGeometryManager::genDrawInfo(LLSpatialGroup* group, U32 mask, LLFac
 void LLGeometryManager::addGeometryCount(LLSpatialGroup* group, U32 &vertex_count, U32 &index_count)
 {	
 	//initialize to default usage for this partition
-	U32 usage = group->getSpatialPartition()->mBufferUsage;
+	U32 usage = group->mSpatialPartition->mBufferUsage;
 	
 	//clear off any old faces
 	mFaceList.clear();
 
 	//for each drawable
 
-	OctreeGuard guard(group->getOctreeNode());
+	OctreeGuard guard(group->mOctreeNode);
 	for (LLSpatialGroup::element_iter drawable_iter = group->getDataBegin(); drawable_iter != group->getDataEnd(); ++drawable_iter)
 	{
-		LLDrawable* drawablep = (LLDrawable*)(*drawable_iter)->getDrawable();
+		LLDrawable* drawablep = *drawable_iter;
 		
 		if (drawablep->isDead())
 		{

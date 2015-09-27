@@ -77,7 +77,7 @@ public:
 		NUM_CAMERAS
 	} eCameraID;
 
-	static LLViewerCamera::eCameraID sCurCameraID;
+	static U32 sCurCameraID;
 
 	LLViewerCamera();
 
